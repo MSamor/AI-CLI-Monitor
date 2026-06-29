@@ -1,6 +1,7 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
 import { IPC_CHANNELS } from '../../shared/ipc'
+import type { PreferencesStore } from '../preferences'
 import type { StateManager } from '../state/stateManager'
 
 const COMPACT_WIDTH = 352
@@ -18,7 +19,10 @@ export class DesktopIslandController {
   private snapTimer?: NodeJS.Timeout
   private snapping = false
 
-  constructor(private stateManager: StateManager) {}
+  constructor(
+    private stateManager: StateManager,
+    private preferences: PreferencesStore
+  ) {}
 
   show(): void {
     if (this.window && !this.window.isDestroyed()) {
@@ -82,6 +86,8 @@ export class DesktopIslandController {
     this.expanded = false
 
     if (this.window && !this.window.isDestroyed()) {
+      this.clearSnapTimer()
+      this.applyBounds()
       this.window.close()
       return
     }
@@ -91,6 +97,8 @@ export class DesktopIslandController {
 
   dispose(): void {
     if (this.window && !this.window.isDestroyed()) {
+      this.clearSnapTimer()
+      this.applyBounds()
       this.window.close()
     }
   }
@@ -120,7 +128,9 @@ export class DesktopIslandController {
       return
     }
 
-    this.window.setBounds(this.bounds(), true)
+    const nextBounds = this.bounds()
+    this.window.setBounds(nextBounds, true)
+    this.saveBounds(nextBounds)
   }
 
   private scheduleSnapToTop(): void {
@@ -160,12 +170,16 @@ export class DesktopIslandController {
     const islandWidth = this.expanded ? EXPANDED_WIDTH : COMPACT_WIDTH
     const islandHeight = this.expanded ? EXPANDED_HEIGHT : COMPACT_HEIGHT
     const currentBounds = this.window && !this.window.isDestroyed() ? this.window.getBounds() : undefined
+    const storedBounds = this.validStoredBounds()
+    const baseBounds = currentBounds ?? storedBounds
     const display = currentBounds
       ? screen.getDisplayMatching(currentBounds)
+      : storedBounds
+        ? screen.getDisplayMatching(storedBounds)
       : screen.getPrimaryDisplay()
     const displayBounds = display.bounds
-    const centerX = currentBounds
-      ? currentBounds.x + currentBounds.width / 2
+    const centerX = baseBounds
+      ? baseBounds.x + baseBounds.width / 2
       : displayBounds.x + displayBounds.width / 2
     const preferredX = Math.round(centerX - islandWidth / 2)
     // 灵动岛只允许改变横向位置；纵向始终吸附到当前屏幕顶部，避免拖进其他应用内容区。
@@ -180,6 +194,24 @@ export class DesktopIslandController {
       y: clamp(preferredY, displayBounds.y + TOP_OFFSET, maxY)
     }
   }
+
+  private validStoredBounds(): Electron.Rectangle | undefined {
+    const storedBounds = this.preferences.getDesktopIslandBounds()
+
+    if (!storedBounds || !intersectsAnyDisplay(storedBounds)) {
+      return undefined
+    }
+
+    return storedBounds
+  }
+
+  private saveBounds(bounds = this.window?.getBounds()): void {
+    if (!bounds) {
+      return
+    }
+
+    this.preferences.setDesktopIslandBounds(bounds)
+  }
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -188,4 +220,12 @@ function clamp(value: number, min: number, max: number): number {
   }
 
   return Math.min(Math.max(value, min), max)
+}
+
+function intersectsAnyDisplay(bounds: Electron.Rectangle): boolean {
+  return screen.getAllDisplays().some((display) => intersects(bounds, display.bounds))
+}
+
+function intersects(a: Electron.Rectangle, b: Electron.Rectangle): boolean {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
 }
