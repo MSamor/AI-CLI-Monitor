@@ -2,13 +2,16 @@ import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
 import type { StateManager } from '../state/stateManager'
 
-const ISLAND_WIDTH = 238
-const ISLAND_HEIGHT = 24
+const COMPACT_WIDTH = 292
+const COMPACT_HEIGHT = 32
+const EXPANDED_WIDTH = 420
+const EXPANDED_HEIGHT = 156
 const RIGHT_OFFSET = 10
 const TOP_OFFSET = 1
 
 export class DesktopIslandController {
   private window?: BrowserWindow
+  private expanded = false
 
   constructor(private stateManager: StateManager) {}
 
@@ -16,10 +19,12 @@ export class DesktopIslandController {
     if (this.window && !this.window.isDestroyed()) {
       this.window.show()
       this.window.focus()
+      this.applyBounds()
       this.stateManager.setDesktopIslandEnabled(true, true)
       return
     }
 
+    this.expanded = false
     this.window = new BrowserWindow({
       ...this.bounds(),
       show: false,
@@ -55,6 +60,7 @@ export class DesktopIslandController {
     })
     this.window.on('closed', () => {
       this.window = undefined
+      this.expanded = false
       this.stateManager.setDesktopIslandEnabled(false, false)
     })
 
@@ -62,6 +68,8 @@ export class DesktopIslandController {
   }
 
   hide(): void {
+    this.expanded = false
+
     if (this.window && !this.window.isDestroyed()) {
       this.window.close()
       return
@@ -76,6 +84,15 @@ export class DesktopIslandController {
     }
   }
 
+  setExpanded(expanded: boolean): void {
+    if (this.expanded === expanded) {
+      return
+    }
+
+    this.expanded = expanded
+    this.applyBounds()
+  }
+
   private async loadIslandRoute(window: BrowserWindow): Promise<void> {
     if (process.env.ELECTRON_RENDERER_URL) {
       await window.loadURL(`${process.env.ELECTRON_RENDERER_URL}?view=island`)
@@ -87,14 +104,24 @@ export class DesktopIslandController {
     })
   }
 
+  private applyBounds(): void {
+    if (!this.window || this.window.isDestroyed()) {
+      return
+    }
+
+    this.window.setBounds(this.bounds(), true)
+  }
+
   private bounds(): Electron.Rectangle {
     const display = screen.getPrimaryDisplay()
     const { x, y, width } = display.bounds
+    const islandWidth = this.expanded ? EXPANDED_WIDTH : COMPACT_WIDTH
+    const islandHeight = this.expanded ? EXPANDED_HEIGHT : COMPACT_HEIGHT
 
     return {
-      width: ISLAND_WIDTH,
-      height: ISLAND_HEIGHT,
-      x: Math.round(x + width - ISLAND_WIDTH - RIGHT_OFFSET),
+      width: islandWidth,
+      height: islandHeight,
+      x: Math.round(x + width - islandWidth - RIGHT_OFFSET),
       y: y + TOP_OFFSET
     }
   }

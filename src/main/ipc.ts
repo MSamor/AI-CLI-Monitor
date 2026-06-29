@@ -38,6 +38,10 @@ export function registerIpc(
     desktopIsland.hide()
   })
 
+  ipcMain.handle(IPC_CHANNELS.setDesktopIslandExpanded, async (_event, expanded: boolean) => {
+    desktopIsland.setExpanded(expanded)
+  })
+
   ipcMain.handle(IPC_CHANNELS.minimizeWindow, async (event) => {
     BrowserWindow.fromWebContents(event.sender)?.minimize()
   })

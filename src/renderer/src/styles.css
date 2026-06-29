@@ -7,13 +7,22 @@
   text-rendering: optimizeLegibility;
 }
 
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
-  min-width: 720px;
+  min-width: 760px;
   margin: 0;
+  overflow: hidden;
   background:
     radial-gradient(circle at 18% 12%, rgba(0, 216, 255, 0.2), transparent 26%),
     radial-gradient(circle at 88% 18%, rgba(255, 74, 112, 0.18), transparent 24%),
@@ -69,10 +78,10 @@ button,
 
 .shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px;
+  gap: 8px;
+  padding: 10px;
   -webkit-app-region: drag;
   animation: pageIn 420ms ease-out both;
 }
@@ -97,7 +106,7 @@ button,
 
 .windowChrome {
   display: flex;
-  min-height: 24px;
+  min-height: 22px;
   align-items: center;
   justify-content: space-between;
   color: #91a8b8;
@@ -137,13 +146,13 @@ button,
 .statusBand {
   position: relative;
   display: flex;
-  min-height: 92px;
+  min-height: 70px;
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
-  padding: 16px 18px;
+  padding: 12px 14px;
   color: #ffffff;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
 }
@@ -165,7 +174,7 @@ button,
 
 .statusBand h1 {
   margin: 4px 0 0;
-  font-size: 30px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
@@ -173,9 +182,9 @@ button,
 
 .heroSubline {
   max-width: 520px;
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: rgba(255, 255, 255, 0.78);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.55;
 }
 
@@ -201,8 +210,8 @@ button,
 .ledPreview {
   position: relative;
   display: grid;
-  width: 58px;
-  height: 58px;
+  width: 46px;
+  height: 46px;
   flex: 0 0 auto;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -213,7 +222,7 @@ button,
 .ledPreview::before,
 .ledPreview::after {
   position: absolute;
-  inset: 6px;
+  inset: 5px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   content: "";
@@ -221,14 +230,14 @@ button,
 }
 
 .ledPreview::after {
-  inset: 12px;
+  inset: 10px;
   animation-duration: 3.2s;
   animation-direction: reverse;
 }
 
 .ledPreview span {
-  width: 26px;
-  height: 26px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: currentColor;
   box-shadow: 0 0 28px rgba(255, 255, 255, 0.82);
@@ -265,8 +274,8 @@ button,
 }
 
 .panel {
-  min-height: 112px;
-  padding: 12px;
+  min-height: 84px;
+  padding: 10px;
   animation: riseIn 460ms ease-out both;
 }
 
@@ -286,8 +295,8 @@ button,
 
 .stateValue {
   position: relative;
-  margin-top: 9px;
-  font-size: 20px;
+  margin-top: 6px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0;
 }
@@ -315,10 +324,13 @@ button,
 
 .panel p {
   position: relative;
-  margin: 5px 0 0;
+  overflow: hidden;
+  margin: 3px 0 0;
   color: #91a8b8;
   font-size: 10px;
   line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .diagnostic {
@@ -337,18 +349,18 @@ button,
   position: relative;
   display: flex;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .inlineActions button,
 .commandButton,
 .islandControls button {
   display: inline-flex;
-  min-height: 28px;
+  min-height: 24px;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 0 12px;
+  gap: 6px;
+  padding: 0 9px;
   background: rgba(216, 240, 255, 0.12);
   color: #e8f8ff;
   transition:
@@ -368,26 +380,26 @@ button,
 
 .workspace {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-  gap: 10px;
-  min-height: 210px;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 8px;
+  min-height: 168px;
 }
 
 .controlPanel,
 .logPanel {
-  padding: 12px;
+  padding: 10px;
 }
 
 .buttonGrid {
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .commandButton {
-  min-height: 36px;
+  min-height: 30px;
   color: #ffffff;
   font-weight: 800;
 }
@@ -412,13 +424,13 @@ button,
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .islandStatus {
   position: relative;
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: #91a8b8;
   font-size: 11px;
 }
@@ -426,24 +438,24 @@ button,
 .eventList {
   position: relative;
   display: flex;
-  max-height: 160px;
+  max-height: 108px;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 10px;
-  overflow: auto;
-  padding-right: 4px;
+  gap: 5px;
+  margin-top: 8px;
+  overflow: hidden;
+  padding-right: 0;
 }
 
 .event {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
-  gap: 9px;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 7px;
   border-left: 3px solid rgba(122, 208, 255, 0.5);
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.045);
-  padding: 6px 8px;
+  padding: 5px 7px;
   color: #d9f4ff;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.35;
   animation: eventIn 260ms ease-out both;
 }
@@ -488,6 +500,26 @@ button,
   user-select: none;
   -webkit-app-region: drag;
   animation: islandEnter 320ms cubic-bezier(0.2, 0.9, 0.2, 1.15) both;
+  transition:
+    border-radius 260ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    background 260ms ease,
+    transform 260ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  -webkit-app-region: no-drag;
+}
+
+.island-compact {
+  grid-template-columns: 14px minmax(0, 1fr);
+  grid-template-rows: 1fr;
+}
+
+.island-expanded {
+  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-rows: 36px minmax(0, 1fr);
+  align-content: start;
+  gap: 9px;
+  border-radius: 22px;
+  padding: 12px 14px;
+  transform: scale(1);
 }
 
 .island-red {
@@ -523,6 +555,13 @@ button,
   background: #4ff0a6;
   box-shadow: 0 0 16px rgba(79, 240, 166, 0.72);
   animation: pulse 1.7s ease-in-out infinite;
+  -webkit-app-region: drag;
+}
+
+.island-expanded .islandPulse {
+  width: 14px;
+  height: 14px;
+  align-self: center;
 }
 
 .islandPulse::after {
@@ -552,6 +591,11 @@ button,
   align-items: center;
   gap: 6px;
   min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+.island-expanded .islandContent {
+  min-height: 28px;
 }
 
 .islandTitle {
@@ -564,12 +608,20 @@ button,
   white-space: nowrap;
 }
 
+.island-expanded .islandTitle {
+  font-size: 15px;
+}
+
 .islandAgents {
   display: flex;
   min-width: 0;
   gap: 4px;
   margin-top: 0;
   overflow: hidden;
+}
+
+.island-expanded .islandAgents {
+  gap: 6px;
 }
 
 .islandAgent {
@@ -585,6 +637,84 @@ button,
   font-size: 9px;
   white-space: nowrap;
   animation: chipIn 260ms ease-out both;
+}
+
+.island-expanded .islandAgent {
+  max-width: 112px;
+  min-height: 20px;
+  border-radius: 12px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+
+.islandDetails {
+  position: relative;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  min-width: 0;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  animation: islandDetailsIn 220ms 80ms ease-out forwards;
+}
+
+.islandMetric {
+  display: grid;
+  min-height: 30px;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.islandMetric span,
+.islandMetric strong,
+.islandEvent span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.islandMetric strong {
+  color: #ffffff;
+}
+
+.islandMetric-running,
+.islandMetric-red,
+.islandMetric-error {
+  background: rgba(255, 82, 102, 0.23);
+}
+
+.islandMetric-waiting,
+.islandMetric-yellow,
+.islandMetric-scanning {
+  background: rgba(255, 193, 90, 0.23);
+}
+
+.islandMetric-idle,
+.islandMetric-green,
+.islandMetric-connected,
+.islandMetric-mock {
+  background: rgba(79, 240, 166, 0.2);
+}
+
+.islandEvent {
+  display: grid;
+  grid-column: 1 / -1;
+  min-height: 28px;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.74);
+  padding: 0 8px;
+  font-size: 11px;
 }
 
 .islandAgent span,
@@ -683,6 +813,13 @@ button,
   }
 }
 
+@keyframes islandDetailsIn {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes islandSweep {
   0%,
   28% {
@@ -723,26 +860,5 @@ button,
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@media (max-width: 900px) {
-  body {
-    min-width: 0;
-  }
-
-  .grid,
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .statusBand {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 22px;
-  }
-
-  .statusBand h1 {
-    font-size: 42px;
   }
 }

@@ -22,6 +22,8 @@ const api: AiMonitorApi = {
   useMockBle: () => ipcRenderer.invoke(IPC_CHANNELS.useMockBle),
   setDesktopIslandEnabled: (enabled: boolean) =>
     ipcRenderer.invoke(IPC_CHANNELS.setDesktopIslandEnabled, enabled),
+  setDesktopIslandExpanded: (expanded: boolean) =>
+    ipcRenderer.invoke(IPC_CHANNELS.setDesktopIslandExpanded, expanded),
   minimizeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.minimizeWindow),
   closeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.closeWindow)
 }

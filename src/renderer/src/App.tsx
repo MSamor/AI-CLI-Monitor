@@ -69,7 +69,7 @@ export function App(): JSX.Element {
   }
 
   if (view === 'island') {
-    return <Island agent={snapshot.agent} />
+    return <Island snapshot={snapshot} />
   }
 
   return (
@@ -193,7 +193,7 @@ function BlePanel({ ble }: { ble: BleSnapshot }): JSX.Element {
     <div className="panel">
       <div className="sectionHeader">
         <Bluetooth size={22} />
-      <h2>蓝牙硬件</h2>
+        <h2>蓝牙硬件</h2>
       </div>
       <div className={`stateValue stateValue-${ble.state}`}>{labelForBleState(ble.state)}</div>
       <p>{ble.mode === 'mock' ? '模拟蓝牙通道' : ble.deviceName ?? '正在扫描 AI_LED'}</p>
@@ -215,6 +215,8 @@ function BlePanel({ ble }: { ble: BleSnapshot }): JSX.Element {
 }
 
 function EventLog({ events }: { events: MonitorEvent[] }): JSX.Element {
+  const visibleEvents = events.slice(0, 3)
+
   return (
     <div className="logPanel">
       <div className="sectionHeader">
@@ -222,8 +224,8 @@ function EventLog({ events }: { events: MonitorEvent[] }): JSX.Element {
         <h2>事件流</h2>
       </div>
       <div className="eventList">
-        {events.length === 0 ? <div className="empty">暂无事件</div> : null}
-        {events.map((event) => (
+        {visibleEvents.length === 0 ? <div className="empty">暂无事件</div> : null}
+        {visibleEvents.map((event) => (
           <div className={`event event-${event.level}`} key={event.id}>
             <time>{new Date(event.at).toLocaleTimeString()}</time>
             <span>{event.message}</span>

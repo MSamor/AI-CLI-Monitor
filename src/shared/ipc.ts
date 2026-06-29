@@ -5,6 +5,7 @@ export const IPC_CHANNELS = {
   reconnectBle: 'monitor:reconnect-ble',
   useMockBle: 'monitor:use-mock-ble',
   setDesktopIslandEnabled: 'monitor:set-desktop-island-enabled',
+  setDesktopIslandExpanded: 'monitor:set-desktop-island-expanded',
   minimizeWindow: 'window:minimize',
   closeWindow: 'window:close'
 } as const

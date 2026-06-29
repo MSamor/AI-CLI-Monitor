@@ -9,6 +9,7 @@ export type AiMonitorApi = {
   reconnectBle: () => Promise<void>
   useMockBle: () => Promise<void>
   setDesktopIslandEnabled: (enabled: boolean) => Promise<void>
+  setDesktopIslandExpanded: (expanded: boolean) => Promise<void>
   minimizeWindow: () => Promise<void>
   closeWindow: () => Promise<void>
 }

@@ -18,8 +18,8 @@ let desktopIsland: DesktopIslandController | undefined
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 780,
-    height: 520,
+    width: 760,
+    height: 440,
     resizable: false,
     maximizable: false,
     fullscreenable: false,
