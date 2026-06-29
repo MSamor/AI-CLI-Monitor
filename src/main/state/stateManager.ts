@@ -98,6 +98,11 @@ export class StateManager extends EventEmitter {
     this.updateAgent({ codex: next }, `Codex 状态变更为「${labelForAgentState(next)}」（${source}）。`)
   }
 
+  recordProcessObservation(message: string): void {
+    this.addEvent('info', message)
+    this.emitSnapshot()
+  }
+
   setDesktopIslandEnabled(enabled: boolean, visible = enabled): void {
     if (this.island.enabled === enabled && this.island.visible === visible) {
       return
@@ -236,12 +241,12 @@ export class StateManager extends EventEmitter {
 
 function labelForAgentState(state: ClaudeState | CodexState): string {
   if (state === 'running') {
-    return '运行中'
+    return 'AI 生成中'
   }
 
   if (state === 'waiting') {
-    return '等待中'
+    return '等待确认'
   }
 
-  return '空闲'
+  return '未生成'
 }

@@ -42,8 +42,8 @@ export class CodexProcessWatcher {
   private async poll(): Promise<void> {
     try {
       const processes = await listProcesses()
-      // Codex 当前没有官方 Hook，v1 使用进程列表作为状态来源。
-      // 连续两次轮询都没有命中时才回到空闲，避免进程瞬时抖动。
+      // 进程存在只说明 Codex CLI 已打开，不代表 AI 正在生成或输出。
+      // 真正的忙闲状态由 /hooks/codex 或 wrapper 上报，避免终端空开时误亮红灯。
       const hasCodex = processes.some((processInfo) =>
         isCodexProcess(processInfo, this.currentPid, this.currentPpid)
       )
@@ -53,7 +53,7 @@ export class CodexProcessWatcher {
 
         if (!this.running) {
           this.running = true
-          this.stateManager.setCodexState('running', '进程监听')
+          this.stateManager.recordProcessObservation('Codex CLI 已打开，等待 AI 活动上报。')
         }
 
         return
@@ -63,7 +63,7 @@ export class CodexProcessWatcher {
 
       if (this.running && this.cleanPolls >= 2) {
         this.running = false
-        this.stateManager.setCodexState('idle', '进程监听')
+        this.stateManager.setCodexState('idle', '进程已退出')
       }
     } catch {
       if (this.running) {

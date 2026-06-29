@@ -1,12 +1,13 @@
 import {
   Activity,
   Bluetooth,
+  Brain,
   Circle,
   Minus,
   MonitorDot,
   Play,
   RefreshCw,
-  Terminal,
+  Sparkles,
   X,
   Zap
 } from 'lucide-react'
@@ -24,10 +25,10 @@ import { Island } from './Island'
 import { useMonitorStore } from './store'
 
 const commandButtons: Array<{ command: LedCommand; label: string; tone: GlobalState | 'blue' }> = [
-  { command: 'G', label: '空闲绿', tone: 'green' },
-  { command: 'Y', label: '等待黄', tone: 'yellow' },
-  { command: 'R', label: '运行红', tone: 'red' },
-  { command: 'B', label: '呼吸蓝', tone: 'blue' }
+  { command: 'G', label: '静默', tone: 'green' },
+  { command: 'Y', label: '待确认', tone: 'yellow' },
+  { command: 'R', label: '输出中', tone: 'red' },
+  { command: 'B', label: '呼吸', tone: 'blue' }
 ]
 
 export function App(): JSX.Element {
@@ -75,7 +76,7 @@ export function App(): JSX.Element {
   return (
     <main className="shell">
       <div className="windowChrome">
-        <div className="windowTitle">AI 命令行监听器</div>
+        <div className="windowTitle">AI Stream Ops</div>
         <div className="windowActions">
           <button type="button" title="最小化" onClick={() => void window.aiMonitor.minimizeWindow()}>
             <Minus size={14} />
@@ -85,31 +86,36 @@ export function App(): JSX.Element {
           </button>
         </div>
       </div>
+
       <section className={`statusBand statusBand-${snapshot.agent.global}`}>
         <div>
-          <div className="eyebrow">AI 命令行状态中枢</div>
+          <div className="eyebrow">REAL-TIME AI OUTPUT</div>
           <h1>{labelForGlobal(snapshot.agent.global)}</h1>
           <p className="heroSubline">{globalDescription(snapshot.agent.global)}</p>
         </div>
-        <div className="ledPreview" aria-label={`当前灯光状态：${labelForGlobal(snapshot.agent.global)}`}>
-          <span />
+        <div className="statusCluster" aria-label={`当前 AI 输出状态：${labelForGlobal(snapshot.agent.global)}`}>
+          <div className="statusClusterItem">
+            <strong>{activeCount(snapshot.agent.claude, snapshot.agent.codex)}</strong>
+            <span>生成源</span>
+          </div>
+          <div className="ledPreview">
+            <span />
+          </div>
         </div>
       </section>
 
-      <section className="grid">
-        <StatePanel
-          icon={<Activity size={22} />}
+      <section className="agentGrid">
+        <AgentTrack
+          icon={<Brain size={20} />}
           label="Claude"
-          value={labelForAgentState(snapshot.agent.claude)}
-          valueClass={snapshot.agent.claude}
-          detail="通过 Claude 钩子接收工具调用和等待状态"
+          state={snapshot.agent.claude}
+          detail={agentDetail('Claude', snapshot.agent.claude)}
         />
-        <StatePanel
-          icon={<Terminal size={22} />}
+        <AgentTrack
+          icon={<Sparkles size={20} />}
           label="Codex"
-          value={labelForAgentState(snapshot.agent.codex)}
-          valueClass={snapshot.agent.codex}
-          detail="通过跨平台进程监听识别 Codex 是否运行"
+          state={snapshot.agent.codex}
+          detail={agentDetail('Codex', snapshot.agent.codex)}
         />
         <BlePanel ble={snapshot.ble} />
       </section>
@@ -117,8 +123,8 @@ export function App(): JSX.Element {
       <section className="workspace">
         <div className="controlPanel">
           <div className="sectionHeader">
-            <MonitorDot size={20} />
-            <h2>手动灯控</h2>
+            <MonitorDot size={18} />
+            <h2>控制</h2>
           </div>
           <div className="buttonGrid">
             {commandButtons.map((button) => (
@@ -129,7 +135,7 @@ export function App(): JSX.Element {
                 title={`发送 ${button.command} 指令`}
                 onClick={() => void window.aiMonitor.setManualLed(button.command)}
               >
-                <Circle size={18} fill="currentColor" />
+                <Circle size={14} fill="currentColor" />
                 <span>{button.label}</span>
               </button>
             ))}
@@ -140,16 +146,16 @@ export function App(): JSX.Element {
               title="开启桌面灵动岛"
               onClick={() => void window.aiMonitor.setDesktopIslandEnabled(true)}
             >
-              <Activity size={17} />
-              <span>开启灵动岛</span>
+              <Activity size={15} />
+              <span>开灵动岛</span>
             </button>
             <button
               type="button"
               title="关闭桌面灵动岛"
               onClick={() => void window.aiMonitor.setDesktopIslandEnabled(false)}
             >
-              <Circle size={17} />
-              <span>关闭灵动岛</span>
+              <Circle size={15} />
+              <span>关灵动岛</span>
             </button>
           </div>
           <p className="islandStatus">
@@ -163,26 +169,29 @@ export function App(): JSX.Element {
   )
 }
 
-function StatePanel({
+function AgentTrack({
   icon,
   label,
-  value,
-  valueClass,
+  state,
   detail
 }: {
   icon: JSX.Element
   label: string
-  value: string
-  valueClass: ClaudeState | CodexState
+  state: ClaudeState | CodexState
   detail: string
 }): JSX.Element {
   return (
-    <div className="panel">
+    <div className={`panel agentPanel agentPanel-${state}`}>
       <div className="sectionHeader">
         {icon}
         <h2>{label}</h2>
+        <span className={`statusPill statusPill-${state}`}>{labelForAgentState(state)}</span>
       </div>
-      <div className={`stateValue stateValue-${valueClass}`}>{value}</div>
+      <div className="signalRail" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
       <p>{detail}</p>
     </div>
   )
@@ -190,23 +199,25 @@ function StatePanel({
 
 function BlePanel({ ble }: { ble: BleSnapshot }): JSX.Element {
   return (
-    <div className="panel">
+    <div className={`panel blePanel blePanel-${ble.state}`}>
       <div className="sectionHeader">
-        <Bluetooth size={22} />
-        <h2>蓝牙硬件</h2>
+        <Bluetooth size={20} />
+        <h2>蓝牙灯控</h2>
+        <span className={`statusPill statusPill-${toneForBleState(ble.state)}`}>
+          {labelForBleState(ble.state)}
+        </span>
       </div>
-      <div className={`stateValue stateValue-${ble.state}`}>{labelForBleState(ble.state)}</div>
-      <p>{ble.mode === 'mock' ? '模拟蓝牙通道' : ble.deviceName ?? '正在扫描 AI_LED'}</p>
-      <p className="bleHint">BLE GATT 自动连接，无需系统蓝牙手动配对。</p>
+      <p>{ble.mode === 'mock' ? '模拟蓝牙通道' : ble.deviceName ?? '等待手动重试'}</p>
+      <p className="bleHint">启动后只自动扫描一次；后续需要点击「重连」。</p>
       {ble.lastCommand ? <p className="lastCommand">最近指令：{ble.lastCommand}</p> : null}
       {ble.diagnostic ? <p className="diagnostic">{ble.diagnostic}</p> : null}
       <div className="inlineActions">
         <button type="button" title="重新连接蓝牙" onClick={() => void window.aiMonitor.reconnectBle()}>
-          <RefreshCw size={17} />
+          <RefreshCw size={16} />
           <span>重连</span>
         </button>
         <button type="button" title="切换模拟蓝牙" onClick={() => void window.aiMonitor.useMockBle()}>
-          <Zap size={17} />
+          <Zap size={16} />
           <span>模拟</span>
         </button>
       </div>
@@ -220,8 +231,9 @@ function EventLog({ events }: { events: MonitorEvent[] }): JSX.Element {
   return (
     <div className="logPanel">
       <div className="sectionHeader">
-        <Play size={20} />
+        <Play size={18} />
         <h2>事件流</h2>
+        <span className="eventCount">{visibleEvents.length}</span>
       </div>
       <div className="eventList">
         {visibleEvents.length === 0 ? <div className="empty">暂无事件</div> : null}
@@ -236,52 +248,88 @@ function EventLog({ events }: { events: MonitorEvent[] }): JSX.Element {
   )
 }
 
+function activeCount(claude: ClaudeState, codex: CodexState): number {
+  return [claude, codex].filter((state) => state === 'running').length
+}
+
 function labelForGlobal(state: GlobalState): string {
   if (state === 'red') {
-    return '运行中'
+    return 'AI 正在输出'
   }
 
   if (state === 'yellow') {
-    return '等待确认'
+    return '等待你的确认'
   }
 
-  return '空闲待命'
+  return '没有生成任务'
 }
 
 function globalDescription(state: GlobalState): string {
   if (state === 'red') {
-    return '检测到至少一个 CLI 正在执行任务，硬件灯将保持运行态。'
+    return '检测到 Claude 或 Codex 正在思考、生成或输出内容，硬件灯保持红色。'
   }
 
   if (state === 'yellow') {
-    return 'Claude 正在等待用户输入或授权，桌面灵动岛会保留提醒。'
+    return 'AI 已暂停在确认点，可能需要授权、输入或继续指令。'
   }
 
-  return 'Claude 与 Codex 当前都没有活跃任务。'
+  return 'Claude 与 Codex 当前没有生成输出，桌面灵动岛保持低干扰。'
 }
 
 function labelForAgentState(state: ClaudeState | CodexState): string {
   if (state === 'running') {
-    return '运行中'
+    return '生成输出中'
   }
 
   if (state === 'waiting') {
-    return '等待中'
+    return '等待确认'
   }
 
-  return '空闲'
+  return '未生成'
+}
+
+function agentDetail(agentName: 'Claude' | 'Codex', state: ClaudeState | CodexState): string {
+  if (state === 'running') {
+    return `${agentName} 正在思考、调用工具或流式输出回复。`
+  }
+
+  if (state === 'waiting') {
+    return `${agentName} 正在等待你的确认或输入。`
+  }
+
+  if (agentName === 'Codex') {
+    return '进程在线不代表生成中；wrapper/hook 上报后才点亮。'
+  }
+
+  return '未检测到新的 AI 生成或输出事件。'
 }
 
 function labelForBleState(state: BleConnectionState): string {
   const labels: Record<BleConnectionState, string> = {
-    idle: '未启动',
+    idle: '待重试',
     scanning: '扫描中',
     connecting: '连接中',
     connected: '已连接',
-    reconnecting: '重连中',
+    reconnecting: '待重连',
     mock: '模拟模式',
     error: '异常'
   }
 
   return labels[state]
+}
+
+function toneForBleState(state: BleConnectionState): 'idle' | 'running' | 'waiting' | 'error' {
+  if (state === 'connected' || state === 'mock') {
+    return 'running'
+  }
+
+  if (state === 'error') {
+    return 'error'
+  }
+
+  if (state === 'idle') {
+    return 'idle'
+  }
+
+  return 'waiting'
 }

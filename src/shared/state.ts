@@ -40,7 +40,7 @@ export function mapClaudeHookToState(payload: ClaudeHookPayload): ClaudeState | 
   const eventName = String(payload.hook_event_name ?? payload.event ?? '')
 
   // Claude 钩子提供的是事件，不是持续状态；这里做保守映射。
-  // 工具调用视为运行，通知视为等待，Stop/SessionEnd 回到空闲。
+  // 用户提交、工具调用代表 AI 正在思考或输出；通知代表等待确认；Stop/SessionEnd 回到空闲。
   switch (eventName) {
     case 'UserPromptSubmit':
     case 'PreToolUse':
@@ -52,6 +52,26 @@ export function mapClaudeHookToState(payload: ClaudeHookPayload): ClaudeState | 
     case 'SubagentStop':
     case 'SessionEnd':
     case 'StopFailure':
+      return 'idle'
+    default:
+      return undefined
+  }
+}
+
+export function mapCodexActivityToState(payload: ClaudeHookPayload): CodexState | undefined {
+  const eventName = String(payload.hook_event_name ?? payload.event ?? payload.state ?? '')
+
+  switch (eventName) {
+    case 'thinking':
+    case 'generating':
+    case 'streaming':
+    case 'running':
+    case 'start':
+      return 'running'
+    case 'idle':
+    case 'stop':
+    case 'done':
+    case 'exit':
       return 'idle'
     default:
       return undefined

@@ -8,8 +8,6 @@ import type { BleSnapshot, LedCommand } from '../../shared/types'
 import { BleTransport, errorMessage } from './bleTransport'
 
 const SCAN_TIMEOUT_MS = 8000
-const BASE_RECONNECT_MS = 2500
-const MAX_RECONNECT_MS = 9000
 
 export class NobleBleTransport extends BleTransport {
   readonly mode = 'noble' as const
@@ -24,9 +22,8 @@ export class NobleBleTransport extends BleTransport {
   private rxCharacteristic?: Characteristic
   private connectingPeripheralId?: string
   private scanTimer?: NodeJS.Timeout
-  private reconnectTimer?: NodeJS.Timeout
-  private reconnectAttempts = 0
   private started = false
+  private scanAttempted = false
 
   async start(): Promise<void> {
     if (!this.started) {
@@ -40,7 +37,6 @@ export class NobleBleTransport extends BleTransport {
 
   async stop(): Promise<void> {
     this.clearScanTimer()
-    this.clearReconnectTimer()
     noble.off('stateChange', this.handleStateChange)
     noble.off('discover', this.handleDiscover)
     this.started = false
@@ -72,12 +68,13 @@ export class NobleBleTransport extends BleTransport {
 
   private handleStateChange = (state: NobleState): void => {
     if (state === 'poweredOn') {
-      void this.scan()
+      if (!this.scanAttempted) {
+        void this.scan()
+      }
       return
     }
 
     this.clearScanTimer()
-    this.clearReconnectTimer()
     this.rxCharacteristic = undefined
     this.peripheral = undefined
     this.connectingPeripheralId = undefined
@@ -100,6 +97,7 @@ export class NobleBleTransport extends BleTransport {
       return
     }
 
+    this.scanAttempted = true
     this.clearScanTimer()
     this.updateSnapshot({
       state: 'scanning',
@@ -123,7 +121,6 @@ export class NobleBleTransport extends BleTransport {
         state: 'error',
         diagnostic: `蓝牙扫描失败：${errorMessage(error)}`
       })
-      this.scheduleReconnect()
     }
   }
 
@@ -165,7 +162,6 @@ export class NobleBleTransport extends BleTransport {
 
       this.rxCharacteristic = rxCharacteristic
       this.connectingPeripheralId = undefined
-      this.reconnectAttempts = 0
       peripheral.once('disconnect', this.handleDisconnect)
       this.updateSnapshot({
         state: 'connected',
@@ -178,9 +174,8 @@ export class NobleBleTransport extends BleTransport {
       await peripheral.disconnectAsync().catch(() => undefined)
       this.updateSnapshot({
         state: 'error',
-        diagnostic: `蓝牙连接失败：${errorMessage(error)}`
+        diagnostic: `蓝牙连接失败：${errorMessage(error)}。后续请手动点击「重连」。`
       })
-      this.scheduleReconnect()
     }
   }
 
@@ -189,37 +184,9 @@ export class NobleBleTransport extends BleTransport {
     this.peripheral = undefined
     this.connectingPeripheralId = undefined
     this.updateSnapshot({
-      state: 'reconnecting',
-      diagnostic: '蓝牙设备已断开，正在自动重连...'
+      state: 'idle',
+      diagnostic: '蓝牙设备已断开。自动连接只执行一次，如需重新连接请手动点击「重连」。'
     })
-    this.scheduleReconnect()
-  }
-
-  private scheduleReconnect(): void {
-    if (!this.started) {
-      return
-    }
-
-    this.clearReconnectTimer()
-    const delayMs = Math.min(BASE_RECONNECT_MS + this.reconnectAttempts * 750, MAX_RECONNECT_MS)
-    this.reconnectAttempts += 1
-    this.updateSnapshot({
-      state: 'reconnecting',
-      diagnostic: `${Math.round(delayMs / 1000)} 秒后重新扫描 ${BLE_DEVICE_NAME}。`
-    })
-
-    this.reconnectTimer = setTimeout(() => {
-      if (noble.state === 'poweredOn') {
-        void this.scan()
-      }
-    }, delayMs)
-  }
-
-  private clearReconnectTimer(): void {
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer)
-      this.reconnectTimer = undefined
-    }
   }
 
   private clearScanTimer(): void {
@@ -237,7 +204,10 @@ export class NobleBleTransport extends BleTransport {
     }
 
     await this.stopScanning()
-    this.scheduleReconnect()
+    this.updateSnapshot({
+      state: 'idle',
+      diagnostic: `本次没有发现 ${BLE_DEVICE_NAME}。自动扫描只执行一次，如需重试请手动点击「重连」。`
+    })
   }
 
   private async stopScanning(): Promise<void> {

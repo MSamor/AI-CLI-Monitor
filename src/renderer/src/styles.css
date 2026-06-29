@@ -1,6 +1,17 @@
 :root {
-  color: #eef7ff;
-  background: #071016;
+  --color-background: #0f172a;
+  --color-surface: rgba(15, 23, 42, 0.78);
+  --color-surface-strong: rgba(15, 23, 42, 0.92);
+  --color-muted: #272f42;
+  --color-border: rgba(148, 163, 184, 0.2);
+  --color-foreground: #f8fafc;
+  --color-secondary: #94a3b8;
+  --color-accent: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #38bdf8;
+  color: var(--color-foreground);
+  background: var(--color-background);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -24,9 +35,9 @@ body {
   margin: 0;
   overflow: hidden;
   background:
-    radial-gradient(circle at 18% 12%, rgba(0, 216, 255, 0.2), transparent 26%),
-    radial-gradient(circle at 88% 18%, rgba(255, 74, 112, 0.18), transparent 24%),
-    linear-gradient(135deg, #071016 0%, #101827 44%, #081315 100%);
+    radial-gradient(circle at 14% 12%, rgba(34, 197, 94, 0.16), transparent 24%),
+    radial-gradient(circle at 86% 18%, rgba(56, 189, 248, 0.14), transparent 22%),
+    linear-gradient(135deg, #08111e 0%, #0f172a 52%, #081512 100%);
 }
 
 body::before {
@@ -34,11 +45,11 @@ body::before {
   inset: 0;
   z-index: -1;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 34px 34px;
+    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
   content: "";
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.78), transparent);
 }
 
 .islandBody {
@@ -72,7 +83,9 @@ button,
 .eventList,
 .inlineActions,
 .buttonGrid,
-.islandControls {
+.islandControls,
+.islandTapSurface,
+.islandDetails {
   -webkit-app-region: no-drag;
 }
 
@@ -83,22 +96,22 @@ button,
   gap: 8px;
   padding: 10px;
   -webkit-app-region: drag;
-  animation: pageIn 420ms ease-out both;
+  animation: pageIn 320ms ease-out both;
 }
 
 .loading {
   margin: auto;
-  color: #9fd8ff;
-  font-size: 16px;
+  color: #bae6fd;
+  font-size: 15px;
 }
 
 .errorPanel {
   margin: auto;
   max-width: 620px;
-  border: 1px solid rgba(255, 126, 100, 0.45);
+  border: 1px solid rgba(248, 113, 113, 0.46);
   border-radius: 8px;
-  background: rgba(75, 22, 28, 0.82);
-  color: #ffd8cf;
+  background: rgba(69, 10, 10, 0.82);
+  color: #fee2e2;
   padding: 18px 20px;
   font-size: 14px;
   line-height: 1.55;
@@ -109,7 +122,7 @@ button,
   min-height: 22px;
   align-items: center;
   justify-content: space-between;
-  color: #91a8b8;
+  color: #9fb1c7;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0;
@@ -131,40 +144,40 @@ button,
   width: 24px;
   height: 22px;
   place-items: center;
-  background: rgba(216, 240, 255, 0.1);
-  color: #d9f4ff;
+  background: rgba(148, 163, 184, 0.12);
+  color: #dbeafe;
   transition:
     background 140ms ease,
     color 140ms ease;
 }
 
 .windowActions button:hover {
-  background: rgba(216, 240, 255, 0.18);
+  background: rgba(148, 163, 184, 0.2);
   color: #ffffff;
 }
 
 .statusBand {
   position: relative;
   display: flex;
-  min-height: 70px;
+  min-height: 68px;
   align-items: center;
   justify-content: space-between;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 8px;
   padding: 12px 14px;
   color: #ffffff;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.28);
 }
 
 .statusBand::before {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.18) 42%, transparent 64%),
-    radial-gradient(circle at 80% 48%, rgba(255, 255, 255, 0.18), transparent 28%);
+    linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.14) 44%, transparent 66%),
+    radial-gradient(circle at 82% 50%, rgba(255, 255, 255, 0.16), transparent 28%);
   content: "";
-  transform: translateX(-65%);
+  transform: translateX(-70%);
   animation: scanGlow 4.8s ease-in-out infinite;
 }
 
@@ -185,33 +198,62 @@ button,
   margin: 4px 0 0;
   color: rgba(255, 255, 255, 0.78);
   font-size: 10px;
-  line-height: 1.55;
+  line-height: 1.45;
 }
 
 .statusBand-green {
-  background: linear-gradient(135deg, #0c473b, #149563);
+  background:
+    radial-gradient(circle at 78% 36%, rgba(56, 189, 248, 0.18), transparent 30%),
+    linear-gradient(135deg, #123c34, #14805b);
 }
 
 .statusBand-red {
-  background: linear-gradient(135deg, #5e1627, #d4353b);
+  background:
+    radial-gradient(circle at 78% 36%, rgba(251, 191, 36, 0.18), transparent 30%),
+    linear-gradient(135deg, #5b1626, #d43346);
 }
 
 .statusBand-yellow {
-  background: linear-gradient(135deg, #684313, #d98b24);
+  background:
+    radial-gradient(circle at 78% 36%, rgba(56, 189, 248, 0.12), transparent 30%),
+    linear-gradient(135deg, #5e4115, #c98322);
 }
 
 .eyebrow {
-  color: rgba(255, 255, 255, 0.74);
-  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0;
+}
+
+.statusCluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.statusClusterItem {
+  display: grid;
+  min-width: 54px;
+  justify-items: end;
+  gap: 1px;
+}
+
+.statusClusterItem strong {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.statusClusterItem span {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 10px;
 }
 
 .ledPreview {
   position: relative;
   display: grid;
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   flex: 0 0 auto;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -223,7 +265,7 @@ button,
 .ledPreview::after {
   position: absolute;
   inset: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 50%;
   content: "";
   animation: orbit 4.6s linear infinite;
@@ -236,18 +278,18 @@ button,
 }
 
 .ledPreview span {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: currentColor;
   box-shadow: 0 0 28px rgba(255, 255, 255, 0.82);
   animation: ledBreath 1.8s ease-in-out infinite;
 }
 
-.grid {
+.agentGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .panel,
@@ -255,10 +297,12 @@ button,
 .logPanel {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(172, 220, 255, 0.18);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: rgba(10, 22, 32, 0.76);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), transparent 44%),
+    var(--color-surface);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(18px);
   -webkit-app-region: drag;
 }
@@ -268,88 +312,143 @@ button,
 .logPanel::before {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 42%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 38%);
   content: "";
   pointer-events: none;
 }
 
 .panel {
-  min-height: 84px;
+  min-height: 82px;
   padding: 10px;
-  animation: riseIn 460ms ease-out both;
+  animation: riseIn 360ms ease-out both;
+}
+
+.agentPanel-running {
+  border-color: rgba(248, 113, 113, 0.42);
+}
+
+.agentPanel-waiting {
+  border-color: rgba(245, 158, 11, 0.46);
+}
+
+.agentPanel-idle {
+  border-color: rgba(34, 197, 94, 0.24);
 }
 
 .sectionHeader {
   position: relative;
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 7px;
-  color: #ccefff;
+  color: #dbeafe;
 }
 
 .sectionHeader h2 {
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   font-size: 12px;
   font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.stateValue {
-  position: relative;
-  margin-top: 6px;
-  font-size: 15px;
+.statusPill,
+.eventCount {
+  margin-left: auto;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  padding: 3px 7px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0;
+  white-space: nowrap;
 }
 
-.stateValue-running,
-.stateValue-error,
-.stateValue-reconnecting {
-  color: #ff6472;
-  text-shadow: 0 0 22px rgba(255, 100, 114, 0.42);
+.statusPill-running {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fecdd3;
 }
 
-.stateValue-waiting,
-.stateValue-scanning,
-.stateValue-connecting {
-  color: #ffc15a;
-  text-shadow: 0 0 22px rgba(255, 193, 90, 0.42);
+.statusPill-waiting {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
 }
 
-.stateValue-idle,
-.stateValue-connected,
-.stateValue-mock {
-  color: #4ff0a6;
-  text-shadow: 0 0 22px rgba(79, 240, 166, 0.4);
+.statusPill-idle {
+  background: rgba(34, 197, 94, 0.16);
+  color: #bbf7d0;
+}
+
+.statusPill-error {
+  background: rgba(248, 113, 113, 0.22);
+  color: #fecdd3;
+}
+
+.signalRail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin: 9px 0 6px;
+}
+
+.signalRail span {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.agentPanel-running .signalRail span {
+  background: linear-gradient(90deg, rgba(248, 113, 113, 0.45), rgba(248, 113, 113, 0.95));
+  animation: railPulse 900ms ease-in-out infinite;
+}
+
+.agentPanel-running .signalRail span:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.agentPanel-running .signalRail span:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+.agentPanel-waiting .signalRail span {
+  background: rgba(245, 158, 11, 0.7);
+}
+
+.agentPanel-idle .signalRail span:first-child {
+  background: rgba(34, 197, 94, 0.68);
 }
 
 .panel p {
   position: relative;
   overflow: hidden;
-  margin: 3px 0 0;
-  color: #91a8b8;
+  margin: 0;
+  color: #9fb1c7;
   font-size: 10px;
-  line-height: 1.45;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .diagnostic {
-  color: #ffc15a !important;
+  color: #facc15 !important;
 }
 
 .bleHint {
-  color: #6f8798 !important;
+  color: #7f93ad !important;
 }
 
 .lastCommand {
-  color: #d9f4ff !important;
+  color: #dbeafe !important;
 }
 
 .inlineActions {
   position: relative;
   display: flex;
   gap: 6px;
-  margin-top: 5px;
+  margin-top: 6px;
 }
 
 .inlineActions button,
@@ -359,30 +458,29 @@ button,
   min-height: 24px;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 0 9px;
-  background: rgba(216, 240, 255, 0.12);
-  color: #e8f8ff;
+  gap: 5px;
+  padding: 0 8px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
   transition:
-    transform 160ms ease,
     background 160ms ease,
-    box-shadow 160ms ease;
+    box-shadow 160ms ease,
+    opacity 160ms ease;
   -webkit-app-region: no-drag;
 }
 
 .inlineActions button:hover,
 .commandButton:hover,
 .islandControls button:hover {
-  background: rgba(216, 240, 255, 0.2);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
-  transform: translateY(-1px);
+  background: rgba(148, 163, 184, 0.2);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
 .workspace {
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
   gap: 8px;
-  min-height: 168px;
+  min-height: 164px;
 }
 
 .controlPanel,
@@ -401,23 +499,24 @@ button,
 .commandButton {
   min-height: 30px;
   color: #ffffff;
+  font-size: 11px;
   font-weight: 800;
 }
 
 .commandButton-green {
-  background: linear-gradient(135deg, #128356, #1ed28d);
+  background: linear-gradient(135deg, #166534, #22c55e);
 }
 
 .commandButton-yellow {
-  background: linear-gradient(135deg, #a45f14, #f5aa37);
+  background: linear-gradient(135deg, #92400e, #f59e0b);
 }
 
 .commandButton-red {
-  background: linear-gradient(135deg, #8c1b2d, #f04d55);
+  background: linear-gradient(135deg, #991b1b, #ef4444);
 }
 
 .commandButton-blue {
-  background: linear-gradient(135deg, #145c89, #26b4ff);
+  background: linear-gradient(135deg, #075985, #38bdf8);
 }
 
 .islandControls {
@@ -431,8 +530,8 @@ button,
 .islandStatus {
   position: relative;
   margin: 6px 0 0;
-  color: #91a8b8;
-  font-size: 11px;
+  color: #9fb1c7;
+  font-size: 10px;
 }
 
 .eventList {
@@ -450,31 +549,31 @@ button,
   display: grid;
   grid-template-columns: 70px minmax(0, 1fr);
   gap: 7px;
-  border-left: 3px solid rgba(122, 208, 255, 0.5);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.045);
+  border-left: 3px solid rgba(56, 189, 248, 0.58);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.052);
   padding: 5px 7px;
-  color: #d9f4ff;
+  color: #dbeafe;
   font-size: 10px;
   line-height: 1.35;
-  animation: eventIn 260ms ease-out both;
+  animation: eventIn 240ms ease-out both;
 }
 
 .event time {
-  color: #87a4b8;
+  color: #8ca1ba;
   font-variant-numeric: tabular-nums;
 }
 
 .event-warning {
-  border-color: #ffc15a;
+  border-color: var(--color-warning);
 }
 
 .event-error {
-  border-color: #ff6472;
+  border-color: var(--color-danger);
 }
 
 .empty {
-  color: #91a8b8;
+  color: #9fb1c7;
   font-size: 12px;
 }
 
@@ -483,55 +582,21 @@ button,
   display: grid;
   width: 100vw;
   height: 100vh;
-  grid-template-columns: 12px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr);
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   overflow: hidden;
   border: 0;
-  border-radius: 12px;
+  border-radius: 999px;
   background:
-    radial-gradient(circle at 18% 50%, rgba(76, 240, 166, 0.28), transparent 32%),
-    linear-gradient(135deg, rgba(8, 12, 18, 0.98), rgba(18, 25, 36, 0.94));
+    radial-gradient(circle at 18% 50%, rgba(34, 197, 94, 0.22), transparent 34%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 12, 0.9));
   color: #ffffff;
-  padding: 3px 8px;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   user-select: none;
   -webkit-app-region: drag;
-  animation: islandEnter 320ms cubic-bezier(0.2, 0.9, 0.2, 1.15) both;
   transition:
-    border-radius 260ms cubic-bezier(0.2, 0.9, 0.2, 1),
-    background 260ms ease,
-    transform 260ms cubic-bezier(0.2, 0.9, 0.2, 1);
-  -webkit-app-region: no-drag;
-}
-
-.island-compact {
-  grid-template-columns: 14px minmax(0, 1fr);
-  grid-template-rows: 1fr;
-}
-
-.island-expanded {
-  grid-template-columns: 20px minmax(0, 1fr);
-  grid-template-rows: 36px minmax(0, 1fr);
-  align-content: start;
-  gap: 9px;
-  border-radius: 22px;
-  padding: 12px 14px;
-  transform: scale(1);
-}
-
-.island-red {
-  background:
-    radial-gradient(circle at 18% 50%, rgba(255, 82, 102, 0.36), transparent 32%),
-    linear-gradient(135deg, rgba(16, 8, 13, 0.98), rgba(38, 18, 24, 0.94));
-}
-
-.island-yellow {
-  background:
-    radial-gradient(circle at 18% 50%, rgba(255, 193, 90, 0.34), transparent 32%),
-    linear-gradient(135deg, rgba(20, 13, 7, 0.98), rgba(42, 29, 15, 0.94));
+    background 220ms ease,
+    box-shadow 220ms ease;
 }
 
 .island::before {
@@ -539,111 +604,131 @@ button,
   inset: 0;
   border-radius: inherit;
   background:
-    linear-gradient(110deg, transparent, rgba(255, 255, 255, 0.18), transparent),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 40%);
+    linear-gradient(108deg, transparent 18%, rgba(255, 255, 255, 0.16), transparent 56%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 42%);
   content: "";
   pointer-events: none;
   transform: translateX(-58%);
-  animation: islandSweep 3.6s ease-in-out infinite;
+  animation: islandSweep 3.8s ease-in-out infinite;
+}
+
+.island-compact {
+  padding: 4px 9px 4px 7px;
+  box-shadow:
+    0 16px 38px rgba(0, 0, 0, 0.32),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.island-expanded {
+  grid-template-rows: 34px minmax(0, 1fr);
+  align-content: start;
+  align-items: start;
+  gap: 8px;
+  border-radius: 24px;
+  padding: 10px 12px;
+  box-shadow:
+    0 24px 58px rgba(0, 0, 0, 0.38),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.island-red {
+  background:
+    radial-gradient(circle at 18% 50%, rgba(239, 68, 68, 0.36), transparent 34%),
+    linear-gradient(135deg, rgba(39, 10, 16, 0.96), rgba(9, 6, 10, 0.9));
+}
+
+.island-yellow {
+  background:
+    radial-gradient(circle at 18% 50%, rgba(245, 158, 11, 0.36), transparent 34%),
+    linear-gradient(135deg, rgba(34, 21, 8, 0.96), rgba(11, 8, 5, 0.9));
+}
+
+.islandDragHandle {
+  position: relative;
+  display: grid;
+  width: 18px;
+  height: 100%;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.46);
+  -webkit-app-region: drag;
+}
+
+.islandTapSurface {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  grid-template-columns: 13px auto auto auto;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  -webkit-app-region: no-drag;
+}
+
+.island-expanded .islandTapSurface {
+  min-height: 28px;
+  grid-column: 2;
 }
 
 .islandPulse {
   position: relative;
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: #4ff0a6;
-  box-shadow: 0 0 16px rgba(79, 240, 166, 0.72);
-  animation: pulse 1.7s ease-in-out infinite;
-  -webkit-app-region: drag;
-}
-
-.island-expanded .islandPulse {
-  width: 14px;
-  height: 14px;
-  align-self: center;
-}
-
-.islandPulse::after {
-  position: absolute;
-  inset: -4px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  color: rgba(255, 255, 255, 0.26);
-  content: "";
-  animation: ripple 1.7s ease-out infinite;
+  background: var(--color-accent);
+  box-shadow:
+    0 0 16px rgba(34, 197, 94, 0.72),
+    0 0 34px rgba(34, 197, 94, 0.28);
 }
 
 .island-red .islandPulse {
-  background: #ff5266;
-  box-shadow: 0 0 16px rgba(255, 82, 102, 0.82);
+  background: var(--color-danger);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.82);
 }
 
 .island-yellow .islandPulse {
-  background: #ffc15a;
-  box-shadow: 0 0 16px rgba(255, 193, 90, 0.8);
-}
-
-.islandContent {
-  position: relative;
-  display: flex;
-  min-height: 18px;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  -webkit-app-region: no-drag;
-}
-
-.island-expanded .islandContent {
-  min-height: 28px;
+  background: var(--color-warning);
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.76);
 }
 
 .islandTitle {
-  flex: 0 0 auto;
   overflow: hidden;
-  font-size: 10px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 850;
   letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .island-expanded .islandTitle {
-  font-size: 15px;
+  font-size: 14px;
 }
 
-.islandAgents {
-  display: flex;
-  min-width: 0;
-  gap: 4px;
-  margin-top: 0;
-  overflow: hidden;
-}
-
-.island-expanded .islandAgents {
-  gap: 6px;
-}
-
-.islandAgent {
+.islandMeta,
+.islandBle {
   display: inline-flex;
-  max-width: 58px;
-  min-height: 14px;
+  min-width: 0;
+  min-height: 18px;
   align-items: center;
   gap: 3px;
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.88);
-  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.085);
+  color: rgba(255, 255, 255, 0.74);
+  padding: 0 6px;
   font-size: 9px;
   white-space: nowrap;
-  animation: chipIn 260ms ease-out both;
 }
 
-.island-expanded .islandAgent {
-  max-width: 112px;
-  min-height: 20px;
-  border-radius: 12px;
-  padding: 0 7px;
+.island-expanded .islandMeta,
+.island-expanded .islandBle {
+  min-height: 21px;
+  padding: 0 8px;
   font-size: 11px;
 }
 
@@ -651,93 +736,153 @@ button,
   position: relative;
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
   min-width: 0;
-  opacity: 0;
-  transform: translateY(-4px) scale(0.98);
-  animation: islandDetailsIn 220ms 80ms ease-out forwards;
+}
+
+.islandAgentRow {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.islandAgent,
+.islandMetric {
+  display: grid;
+  min-height: 28px;
+  align-items: center;
+  gap: 5px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.085);
+  color: rgba(255, 255, 255, 0.82);
+  padding: 0 7px;
+  font-size: 10px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+.islandAgent {
+  grid-template-columns: 16px minmax(0, 1fr) auto;
 }
 
 .islandMetric {
-  display: grid;
-  min-height: 30px;
   grid-template-columns: 16px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 6px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.8);
-  padding: 0 8px;
-  font-size: 11px;
 }
 
+.islandAgent span,
+.islandAgent strong,
 .islandMetric span,
 .islandMetric strong,
-.islandEvent span {
+.islandEvent span,
+.islandDiagnostic {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.islandAgent strong,
 .islandMetric strong {
   color: #ffffff;
+  font-size: 10px;
 }
 
+.islandAgent-running,
 .islandMetric-running,
 .islandMetric-red,
 .islandMetric-error {
-  background: rgba(255, 82, 102, 0.23);
+  background: rgba(239, 68, 68, 0.2);
 }
 
+.islandAgent-waiting,
 .islandMetric-waiting,
 .islandMetric-yellow,
 .islandMetric-scanning {
-  background: rgba(255, 193, 90, 0.23);
+  background: rgba(245, 158, 11, 0.2);
 }
 
+.islandAgent-idle,
 .islandMetric-idle,
 .islandMetric-green,
 .islandMetric-connected,
 .islandMetric-mock {
-  background: rgba(79, 240, 166, 0.2);
+  background: rgba(34, 197, 94, 0.16);
+}
+
+.islandBle-connected {
+  background: rgba(34, 197, 94, 0.18);
+  color: #bbf7d0;
+}
+
+.islandBle-scanning {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fde68a;
+}
+
+.islandBle-error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fecdd3;
+}
+
+.islandBle-mock {
+  background: rgba(56, 189, 248, 0.18);
+  color: #bae6fd;
+}
+
+.islandEventStack {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 4px;
 }
 
 .islandEvent {
   display: grid;
-  grid-column: 1 / -1;
-  min-height: 28px;
-  grid-template-columns: 16px minmax(0, 1fr);
+  min-height: 22px;
+  grid-template-columns: 15px 48px minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
-  border-radius: 10px;
+  gap: 5px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, 0.07);
   color: rgba(255, 255, 255, 0.74);
-  padding: 0 8px;
-  font-size: 11px;
+  padding: 0 7px;
+  font-size: 10px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-.islandAgent span,
-.islandAgent strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
+.islandEvent time {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
 }
 
-.islandAgent strong {
-  color: #ffffff;
-  font-weight: 800;
+.islandEvent-warning {
+  background: rgba(245, 158, 11, 0.14);
 }
 
-.islandAgent-running {
-  background: rgba(255, 82, 102, 0.3);
+.islandEvent-error {
+  background: rgba(239, 68, 68, 0.16);
 }
 
-.islandAgent-waiting {
-  background: rgba(255, 193, 90, 0.3);
+.islandDiagnostic {
+  grid-column: 1 / -1;
+  min-height: 19px;
+  border-radius: 9px;
+  background: rgba(56, 189, 248, 0.12);
+  color: rgba(219, 234, 254, 0.8);
+  padding: 4px 8px;
+  font-size: 10px;
+  line-height: 1.1;
 }
 
-.islandAgent-idle {
-  background: rgba(79, 240, 166, 0.26);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
 }
 
 @keyframes pageIn {
@@ -754,7 +899,7 @@ button,
 @keyframes riseIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -764,10 +909,10 @@ button,
 
 @keyframes scanGlow {
   0%,
-  22% {
+  26% {
     transform: translateX(-70%);
   }
-  58%,
+  70%,
   100% {
     transform: translateX(72%);
   }
@@ -782,12 +927,12 @@ button,
 @keyframes ledBreath {
   0%,
   100% {
-    transform: scale(0.92);
-    opacity: 0.76;
+    opacity: 0.72;
+    transform: scale(0.9);
   }
   50% {
-    transform: scale(1);
     opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -802,24 +947,6 @@ button,
   }
 }
 
-@keyframes islandEnter {
-  from {
-    opacity: 0;
-    transform: scale(0.94) translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes islandDetailsIn {
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 @keyframes islandSweep {
   0%,
   28% {
@@ -831,34 +958,14 @@ button,
   }
 }
 
-@keyframes pulse {
+@keyframes railPulse {
   0%,
   100% {
-    transform: scale(0.94);
+    opacity: 0.45;
+    transform: scaleX(0.86);
   }
   50% {
-    transform: scale(1.08);
-  }
-}
-
-@keyframes ripple {
-  0% {
-    opacity: 0.7;
-    transform: scale(0.8);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.4);
-  }
-}
-
-@keyframes chipIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scaleX(1);
   }
 }
