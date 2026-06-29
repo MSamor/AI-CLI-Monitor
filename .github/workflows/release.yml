@@ -56,6 +56,9 @@ jobs:
       - name: 安装项目依赖
         run: npm ci
 
+      - name: 输出打包元信息
+        run: node -e "const p=require('./package.json'); console.log({author:p.author, homepage:p.homepage, linux:p.build.linux, deb:p.build.deb})"
+
       - name: 构建并打包客户端
         run: npm run dist
         env:

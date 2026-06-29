@@ -2,8 +2,12 @@
   "name": "ai-cli-monitor",
   "version": "0.1.0",
   "description": "AI CLI 状态监听桌面工具，支持灵动岛与 BLE 指示灯。",
-  "author": "maosi <maosi@users.noreply.github.com>",
+  "author": {
+    "name": "maosi",
+    "email": "maosi@users.noreply.github.com"
+  },
   "license": "MIT",
+  "homepage": "https://github.com/maosi/AI-CLI-Monitor",
   "private": true,
   "type": "module",
   "main": "out/main/index.js",
@@ -87,6 +91,9 @@
         "deb"
       ],
       "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}"
+    },
+    "deb": {
+      "maintainer": "maosi <maosi@users.noreply.github.com>"
     },
     "publish": null
   }
