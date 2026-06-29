@@ -36,16 +36,36 @@ jobs:
 
       - name: 固定 Windows Python
         if: runner.os == 'Windows'
+        id: setup-python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: 配置 Windows 原生模块编译环境
+      - name: 初始化 Windows MSBuild
+        if: runner.os == 'Windows'
+        uses: microsoft/setup-msbuild@v2
+        with:
+          vs-version: '[17.0,18.0)'
+          msbuild-architecture: x64
+
+      - name: 检查 Windows 原生编译环境
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          npm config set msvs_version 2022
-          npm config set python "$env:pythonLocation\python.exe"
+          python --version
+          where.exe python
+          where.exe msbuild
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) {
+            throw "未找到包含 C++ 工具链的 Visual Studio 2022。"
+          }
+          Write-Host "Visual Studio: $vsPath"
+          "GYP_MSVS_VERSION=2022" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "GYP_MSVS_OVERRIDE_PATH=$vsPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "npm_config_msvs_version=2022" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "npm_config_python=${{ steps.setup-python.outputs.python-path }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "PYTHON=${{ steps.setup-python.outputs.python-path }}" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: 安装 Linux 蓝牙构建依赖
         if: runner.os == 'Linux'
@@ -53,7 +73,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libbluetooth-dev libudev-dev
 
+      - name: 安装项目依赖（Windows）
+        if: runner.os == 'Windows'
+        run: npm ci
+
       - name: 安装项目依赖
+        if: runner.os != 'Windows'
         run: npm ci
 
       - name: 输出打包元信息
