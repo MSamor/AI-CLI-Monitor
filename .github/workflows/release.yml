@@ -48,7 +48,7 @@ jobs:
           vs-version: '[17.0,18.0)'
           msbuild-architecture: x64
 
-      - name: 检查 Windows 原生编译环境
+      - name: 配置 Windows 原生编译环境
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -63,8 +63,6 @@ jobs:
           Write-Host "Visual Studio: $vsPath"
           "GYP_MSVS_VERSION=2022" | Out-File -FilePath $env:GITHUB_ENV -Append
           "GYP_MSVS_OVERRIDE_PATH=$vsPath" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "npm_config_msvs_version=2022" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "npm_config_python=${{ steps.setup-python.outputs.python-path }}" | Out-File -FilePath $env:GITHUB_ENV -Append
           "PYTHON=${{ steps.setup-python.outputs.python-path }}" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: 安装 Linux 蓝牙构建依赖
