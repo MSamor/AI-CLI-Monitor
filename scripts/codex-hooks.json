@@ -35,17 +35,22 @@
         "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
       }
     ],
+    "PostCompact": [
+      {
+        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+      }
+    ],
+    "SubagentStart": [
+      {
+        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+      }
+    ],
     "SubagentStop": [
       {
         "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
       }
     ],
     "Stop": [
-      {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
-      }
-    ],
-    "SessionEnd": [
       {
         "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
       }

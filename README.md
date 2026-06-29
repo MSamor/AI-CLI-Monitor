@@ -96,9 +96,12 @@ cp scripts/codex-hooks.json ~/.codex/hooks.json
 - `PreToolUse`：即将执行工具，会展示 `tool_name`、`tool_use_id` 和 `tool_input.command`。
 - `PermissionRequest` / `Notification`：等待授权或用户确认。
 - `PostToolUse`：工具执行完成，会保留工具名和本次响应摘要。
-- `PreCompact`：上下文即将压缩。
+- `PreCompact` / `PostCompact`：上下文压缩开始或完成。
+- `SubagentStart`：子任务启动。
 - `SubagentStop`：子任务完成。
-- `Stop` / `SessionEnd`：本轮或会话结束，会回到未生成状态。
+- `Stop`：本轮结束，会回到未生成状态。
+
+如果手动中断输出但 Codex 没有触发 `Stop`，应用会在 45 秒内没有新 hook 活动后自动恢复为未生成，避免状态一直卡在识别中。
 
 hook 脚本会读取 Codex 通过 stdin 传入的 JSON，并转发到：
 

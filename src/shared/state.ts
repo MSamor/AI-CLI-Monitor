@@ -46,20 +46,32 @@ export function createAgentState(
 
 export function mapClaudeHookToState(payload: ClaudeHookPayload): ClaudeState | undefined {
   const eventName = String(payload.hook_event_name ?? payload.event ?? '')
+  const normalizedEventName = eventName.toLowerCase()
 
   // Claude 钩子提供的是事件，不是持续状态；这里做保守映射。
-  // 用户提交、工具调用代表 AI 正在思考或输出；通知代表等待确认；Stop/SessionEnd 回到空闲。
-  switch (eventName) {
-    case 'UserPromptSubmit':
-    case 'PreToolUse':
-    case 'PostToolUse':
+  // 用户提交、工具调用代表 AI 正在思考或输出；通知代表等待确认；结束/中断类事件回到空闲。
+  switch (normalizedEventName) {
+    case 'generating':
+    case 'running':
+    case 'busy':
+    case 'sessionstart':
+    case 'userpromptsubmit':
+    case 'pretooluse':
+    case 'posttooluse':
       return 'running'
-    case 'Notification':
+    case 'notification':
       return 'waiting'
-    case 'Stop':
-    case 'SubagentStop':
-    case 'SessionEnd':
-    case 'StopFailure':
+    case 'idle':
+    case 'stop':
+    case 'turnaborted':
+    case 'interrupted':
+    case 'cancelled':
+    case 'canceled':
+    case 'abort':
+    case 'aborted':
+    case 'subagentstop':
+    case 'sessionend':
+    case 'stopfailure':
       return 'idle'
     default:
       return undefined
@@ -68,22 +80,35 @@ export function mapClaudeHookToState(payload: ClaudeHookPayload): ClaudeState | 
 
 export function mapCodexActivityToState(payload: ClaudeHookPayload): CodexState | undefined {
   const eventName = String(payload.hook_event_name ?? payload.event ?? payload.state ?? '')
+  const normalizedEventName = eventName.toLowerCase()
 
-  switch (eventName) {
-    case 'UserPromptSubmit':
-    case 'PreToolUse':
-    case 'PostToolUse':
-    case 'SubagentStop':
+  switch (normalizedEventName) {
+    case 'generating':
+    case 'running':
+    case 'busy':
+    case 'sessionstart':
+    case 'userpromptsubmit':
+    case 'subagentstart':
+    case 'pretooluse':
+    case 'posttooluse':
+    case 'precompact':
+    case 'postcompact':
+    case 'subagentstop':
       return 'running'
-    case 'PermissionRequest':
-    case 'Notification':
+    case 'permissionrequest':
+    case 'notification':
       return 'running'
     case 'idle':
     case 'stop':
     case 'done':
     case 'exit':
-    case 'Stop':
-    case 'SessionEnd':
+    case 'turnaborted':
+    case 'interrupted':
+    case 'cancelled':
+    case 'canceled':
+    case 'abort':
+    case 'aborted':
+    case 'sessionend':
       return 'idle'
     default:
       return undefined
@@ -117,26 +142,40 @@ export function createCodexActivitySnapshot(payload: ClaudeHookPayload): CodexAc
 }
 
 function phaseForCodexEvent(eventName: string): CodexActivityPhase {
-  switch (eventName) {
-    case 'SessionStart':
+  switch (eventName.toLowerCase()) {
+    case 'sessionstart':
       return 'session'
-    case 'UserPromptSubmit':
+    case 'userpromptsubmit':
+    case 'generating':
+    case 'running':
+    case 'busy':
       return 'prompt'
-    case 'PreToolUse':
+    case 'pretooluse':
       return 'tool-start'
-    case 'PermissionRequest':
+    case 'permissionrequest':
       return 'permission'
-    case 'PostToolUse':
+    case 'posttooluse':
       return 'tool-done'
-    case 'Notification':
+    case 'notification':
       return 'permission'
-    case 'PreCompact':
+    case 'precompact':
       return 'compact'
-    case 'SubagentStop':
+    case 'postcompact':
+      return 'compact-done'
+    case 'subagentstart':
+      return 'subagent-start'
+    case 'subagentstop':
       return 'subagent'
-    case 'Stop':
-    case 'SessionEnd':
+    case 'stop':
+    case 'sessionend':
       return 'stopped'
+    case 'turnaborted':
+    case 'interrupted':
+    case 'cancelled':
+    case 'canceled':
+    case 'abort':
+    case 'aborted':
+      return 'interrupted'
     default:
       return 'session'
   }
@@ -156,8 +195,14 @@ function labelForCodexPhase(phase: CodexActivityPhase, toolName?: string): strin
       return toolName ? `${toolName} 执行完成` : '工具执行完成'
     case 'compact':
       return 'Codex 正在压缩上下文'
+    case 'compact-done':
+      return 'Codex 上下文压缩完成'
+    case 'subagent-start':
+      return 'Codex 子任务启动'
     case 'subagent':
       return 'Codex 子任务完成'
+    case 'interrupted':
+      return 'Codex 已中断'
     case 'stopped':
       return 'Codex 本轮结束'
     case 'idle':

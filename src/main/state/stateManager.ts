@@ -23,6 +23,7 @@ type StateManagerOptions = {
   debounceMs?: number
   resendMs?: number
   maxEvents?: number
+  activityTimeoutMs?: number
 }
 
 export class StateManager extends EventEmitter {
@@ -35,6 +36,8 @@ export class StateManager extends EventEmitter {
   private events: MonitorEvent[] = []
   private debounceTimer?: NodeJS.Timeout
   private resendTimer?: NodeJS.Timeout
+  private claudeActivityTimer?: NodeJS.Timeout
+  private codexActivityTimer?: NodeJS.Timeout
   private lastSentCommand?: LedCommand
   private removeBleStatusListener?: () => void
   private bleReady = false
@@ -43,6 +46,7 @@ export class StateManager extends EventEmitter {
   private readonly debounceMs: number
   private readonly resendMs: number
   private readonly maxEvents: number
+  private readonly activityTimeoutMs: number
 
   constructor(
     private ble: BleTransport,
@@ -52,6 +56,7 @@ export class StateManager extends EventEmitter {
     this.debounceMs = options.debounceMs ?? 500
     this.resendMs = options.resendMs ?? 30_000
     this.maxEvents = options.maxEvents ?? 80
+    this.activityTimeoutMs = options.activityTimeoutMs ?? 45_000
     this.attachBle()
   }
 
@@ -74,6 +79,8 @@ export class StateManager extends EventEmitter {
       clearInterval(this.resendTimer)
     }
 
+    this.clearAgentActivityTimeout('claude')
+    this.clearAgentActivityTimeout('codex')
     this.removeBleStatusListener?.()
     await this.ble.stop()
   }
@@ -100,10 +107,12 @@ export class StateManager extends EventEmitter {
 
   setClaudeState(next: ClaudeState, source: string): void {
     this.updateAgent({ claude: next }, `Claude 状态变更为「${labelForAgentState(next)}」（${source}）。`)
+    this.refreshAgentActivityTimeout('claude', next)
   }
 
   setCodexState(next: CodexState, source: string): void {
     this.updateAgent({ codex: next }, `Codex 状态变更为「${labelForAgentState(next)}」（${source}）。`)
+    this.refreshAgentActivityTimeout('codex', next)
   }
 
   setCodexHookActivity(payload: ClaudeHookPayload, nextState?: CodexState): void {
@@ -114,6 +123,7 @@ export class StateManager extends EventEmitter {
         { codex: nextState },
         `Codex 官方 hook：${this.codexActivity.label}。${this.codexActivity.detail}`
       )
+      this.refreshAgentActivityTimeout('codex', nextState)
       return
     }
 
@@ -218,6 +228,79 @@ export class StateManager extends EventEmitter {
     this.debounceTimer = setTimeout(() => {
       void this.flushGlobalState()
     }, this.debounceMs)
+  }
+
+  private refreshAgentActivityTimeout(agent: 'claude' | 'codex', state: ClaudeState | CodexState): void {
+    this.clearAgentActivityTimeout(agent)
+
+    if (state === 'idle') {
+      return
+    }
+
+    // 有些 CLI 手动中断生成时不会可靠触发 Stop hook。
+    // 这里用 hook 活动超时兜底，避免 UI 和硬件灯长时间停在“生成中”。
+    const timer = setTimeout(() => {
+      this.expireAgentActivity(agent)
+    }, this.activityTimeoutMs)
+
+    if (agent === 'claude') {
+      this.claudeActivityTimer = timer
+      return
+    }
+
+    this.codexActivityTimer = timer
+  }
+
+  private clearAgentActivityTimeout(agent: 'claude' | 'codex'): void {
+    const timer = agent === 'claude' ? this.claudeActivityTimer : this.codexActivityTimer
+
+    if (!timer) {
+      return
+    }
+
+    clearTimeout(timer)
+
+    if (agent === 'claude') {
+      this.claudeActivityTimer = undefined
+      return
+    }
+
+    this.codexActivityTimer = undefined
+  }
+
+  private expireAgentActivity(agent: 'claude' | 'codex'): void {
+    this.clearAgentActivityTimeout(agent)
+
+    if (agent === 'claude') {
+      if (this.agent.claude === 'idle') {
+        return
+      }
+
+      this.updateAgent(
+        { claude: 'idle' },
+        `Claude 超过 ${this.activityTimeoutSeconds()} 秒没有新的 hook 活动，已恢复为未生成。`
+      )
+      return
+    }
+
+    if (this.agent.codex === 'idle') {
+      return
+    }
+
+    this.codexActivity = {
+      phase: 'idle',
+      label: 'Codex 可能已停止',
+      detail: `超过 ${this.activityTimeoutSeconds()} 秒没有收到新的 Codex hook，已自动恢复为未生成。`,
+      updatedAt: new Date().toISOString()
+    }
+    this.updateAgent(
+      { codex: 'idle' },
+      `Codex 超过 ${this.activityTimeoutSeconds()} 秒没有新的 hook 活动，已恢复为未生成。`
+    )
+  }
+
+  private activityTimeoutSeconds(): number {
+    return Math.round(this.activityTimeoutMs / 1000)
   }
 
   private async flushGlobalState(force = false): Promise<void> {

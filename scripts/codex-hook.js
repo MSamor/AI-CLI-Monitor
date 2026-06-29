@@ -59,6 +59,16 @@ async function main() {
     payload = { raw }
   }
 
+  const hookEventName =
+    process.env.CODEX_HOOK_EVENT_NAME ||
+    process.env.CODEX_HOOK_EVENT ||
+    process.env.CODEX_EVENT ||
+    process.env.HOOK_EVENT_NAME
+
+  if (hookEventName && !payload.hook_event_name) {
+    payload.hook_event_name = hookEventName
+  }
+
   await postJson(payload)
 }
 

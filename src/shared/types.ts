@@ -17,7 +17,10 @@ export type CodexActivityPhase =
   | 'permission'
   | 'tool-done'
   | 'compact'
+  | 'compact-done'
+  | 'subagent-start'
   | 'subagent'
+  | 'interrupted'
   | 'stopped'
 
 export type CodexActivitySnapshot = {

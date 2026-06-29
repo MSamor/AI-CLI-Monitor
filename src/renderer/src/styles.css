@@ -748,7 +748,7 @@ button,
   width: 100%;
   min-width: 0;
   min-height: 28px;
-  grid-template-columns: 13px auto auto auto;
+  grid-template-columns: 13px auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
   border-radius: 999px;
@@ -797,6 +797,46 @@ button,
   font-size: 14px;
 }
 
+.islandCliStack {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 3px;
+}
+
+.islandCompactCli {
+  display: inline-grid;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.76);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.islandCompactCli-running {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fecdd3;
+  box-shadow:
+    0 0 14px rgba(239, 68, 68, 0.34),
+    inset 0 0 0 1px rgba(254, 205, 211, 0.18);
+}
+
+.islandCompactCli-waiting {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+}
+
+.islandCompactCli-running svg {
+  animation: logoSpin 1.05s linear infinite;
+}
+
+.islandCompactCli-waiting svg {
+  animation: logoPulse 1.2s ease-in-out infinite;
+}
+
 .islandMeta,
 .islandBle {
   display: inline-flex;
@@ -812,11 +852,21 @@ button,
   white-space: nowrap;
 }
 
+.islandMeta {
+  max-width: 92px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .island-expanded .islandMeta,
 .island-expanded .islandBle {
   min-height: 21px;
   padding: 0 8px;
   font-size: 11px;
+}
+
+.island-expanded .islandMeta {
+  max-width: 150px;
 }
 
 .islandDetails {

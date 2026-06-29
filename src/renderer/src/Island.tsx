@@ -123,6 +123,17 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
           }}
         />
         <span className="islandTitle">{islandTitle(snapshot.agent)}</span>
+        <span className="islandCliStack" aria-label={`当前活跃 CLI：${activeCliLabel(snapshot.agent)}`}>
+          {compactAgentItems(snapshot.agent).map((item) => (
+            <span
+              className={`islandCompactCli islandCompactCli-${item.state}`}
+              key={item.name}
+              title={`${item.name}：${labelForAgentState(item.state)}`}
+            >
+              {item.name === 'Claude' ? <Brain size={11} /> : <Sparkles size={11} />}
+            </span>
+          ))}
+        </span>
         <span className="islandMeta">{activeCliLabel(snapshot.agent)}</span>
         <span className={`islandBle islandBle-${toneForBleState(snapshot.ble.state)}`}>
           <Bluetooth size={11} />
@@ -257,6 +268,19 @@ function idleAgentItems(): Array<{
     { name: 'Claude', state: 'idle' },
     { name: 'Codex', state: 'idle' }
   ]
+}
+
+function compactAgentItems(agent: AgentState): Array<{
+  name: 'Claude' | 'Codex'
+  state: ClaudeState | CodexState
+}> {
+  const activeItems = activeAgentItems(agent)
+
+  if (activeItems.length > 0) {
+    return activeItems
+  }
+
+  return [{ name: 'Codex', state: 'idle' }]
 }
 
 function islandTitle(agent: AgentState): string {
