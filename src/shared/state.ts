@@ -13,8 +13,7 @@ export const DEFAULT_AGENT_STATE: AgentState = {
 }
 
 export function computeGlobalState(state: Pick<AgentState, 'claude' | 'codex'>): GlobalState {
-  // Hardware LED is intentionally coarse-grained: any active CLI means busy.
-  // Detailed per-CLI state is kept for the dashboard and desktop island.
+  // 硬件灯只关心全局忙闲；桌面端保留每个 CLI 的细分状态。
   if (state.claude === 'running' || state.codex === 'running') {
     return 'red'
   }
@@ -40,9 +39,8 @@ export function createAgentState(
 export function mapClaudeHookToState(payload: ClaudeHookPayload): ClaudeState | undefined {
   const eventName = String(payload.hook_event_name ?? payload.event ?? '')
 
-  // Claude Code hooks provide lifecycle events, not a long-lived process state.
-  // This mapping keeps the monitor conservative: tool activity is running,
-  // notifications are waiting, and terminal stop/session events return idle.
+  // Claude 钩子提供的是事件，不是持续状态；这里做保守映射。
+  // 工具调用视为运行，通知视为等待，Stop/SessionEnd 回到空闲。
   switch (eventName) {
     case 'UserPromptSubmit':
     case 'PreToolUse':

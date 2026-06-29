@@ -18,14 +18,16 @@ let desktopIsland: DesktopIslandController | undefined
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1120,
-    height: 760,
-    minWidth: 860,
-    minHeight: 620,
-    title: 'AI CLI Monitor',
+    width: 780,
+    height: 520,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    frame: false,
+    title: 'AI 命令行监听器',
+    backgroundColor: '#071016',
     webPreferences: {
-      // electron-vite emits the preload bundle as ESM, so loading index.mjs is
-      // required for window.aiMonitor to exist in the renderer.
+      // electron-vite 会把 preload 输出为 ESM 文件，必须加载 index.mjs。
       preload: preloadPath,
       sandbox: false,
       contextIsolation: true,

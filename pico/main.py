@@ -7,10 +7,12 @@ import aioble
 DEVICE_NAME = "AI_LED"
 COMMON_ANODE = False
 
+# 默认使用三路 PWM 控制 RGB LED。如果你的接线不同，只改这里即可。
 RED_PIN = 16
 GREEN_PIN = 17
 BLUE_PIN = 18
 
+# Nordic UART Service：桌面端只写 RX，一个字节代表一种灯光状态。
 NUS_SERVICE_UUID = bluetooth.UUID("6e400001-b5a3-f393-e0a9-e50e24dcca9e")
 NUS_RX_UUID = bluetooth.UUID("6e400002-b5a3-f393-e0a9-e50e24dcca9e")
 NUS_TX_UUID = bluetooth.UUID("6e400003-b5a3-f393-e0a9-e50e24dcca9e")
@@ -36,6 +38,7 @@ breathing = False
 
 
 def duty(value):
+    # 共阳极 LED 的 PWM 逻辑相反，通过 COMMON_ANODE 统一处理。
     value = max(0, min(65535, int(value)))
     return 65535 - value if COMMON_ANODE else value
 
@@ -50,6 +53,7 @@ def set_led(command):
     global breathing
     breathing = command == "B"
 
+    # Pico 只解析极简指令，不承载复杂业务逻辑。
     if command == "R":
         rgb(65535, 0, 0)
     elif command == "G":
@@ -68,6 +72,7 @@ async def breathe_loop():
 
     while True:
         if breathing:
+            # 蓝色呼吸灯用于后续 thinking/处理中等更细状态。
             rgb(0, 0, level)
             level += direction * 2200
 
@@ -86,6 +91,7 @@ async def peripheral_loop():
     set_led("G")
 
     while True:
+        # 广播名必须与桌面端 BLE_DEVICE_NAME 保持一致。
         async with await aioble.advertise(
             250000,
             name=DEVICE_NAME,

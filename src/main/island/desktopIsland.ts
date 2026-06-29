@@ -1,12 +1,11 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
-import { IPC_CHANNELS } from '../../shared/ipc'
-import type { MonitorSnapshot } from '../../shared/types'
 import type { StateManager } from '../state/stateManager'
 
-const ISLAND_WIDTH = 430
-const ISLAND_HEIGHT = 118
-const TOP_OFFSET = 18
+const ISLAND_WIDTH = 238
+const ISLAND_HEIGHT = 24
+const RIGHT_OFFSET = 10
+const TOP_OFFSET = 1
 
 export class DesktopIslandController {
   private window?: BrowserWindow
@@ -28,12 +27,16 @@ export class DesktopIslandController {
       resizable: false,
       movable: true,
       transparent: true,
+      backgroundColor: '#00000000',
+      hasShadow: false,
+      roundedCorners: false,
+      maximizable: false,
+      fullscreenable: false,
       alwaysOnTop: true,
       skipTaskbar: true,
-      title: 'AI CLI Monitor Island',
+      title: 'AI 状态灵动岛',
       webPreferences: {
-        // The island is a second renderer route that uses the same safe IPC
-        // surface as the main dashboard.
+        // 灵动岛复用同一个渲染入口，只通过 query 参数切换成小窗视图。
         preload: join(__dirname, '../preload/index.mjs'),
         sandbox: false,
         contextIsolation: true,
@@ -41,7 +44,11 @@ export class DesktopIslandController {
       }
     })
 
-    this.window.setAlwaysOnTop(true, 'floating')
+    this.window.setAlwaysOnTop(true, 'screen-saver')
+    this.window.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true
+    })
     this.window.once('ready-to-show', () => {
       this.window?.showInactive()
       this.stateManager.setDesktopIslandEnabled(true, true)
@@ -63,12 +70,6 @@ export class DesktopIslandController {
     this.stateManager.setDesktopIslandEnabled(false, false)
   }
 
-  broadcast(snapshot: MonitorSnapshot): void {
-    if (this.window && !this.window.isDestroyed()) {
-      this.window.webContents.send(IPC_CHANNELS.snapshotChanged, snapshot)
-    }
-  }
-
   dispose(): void {
     if (this.window && !this.window.isDestroyed()) {
       this.window.close()
@@ -88,12 +89,12 @@ export class DesktopIslandController {
 
   private bounds(): Electron.Rectangle {
     const display = screen.getPrimaryDisplay()
-    const { x, y, width } = display.workArea
+    const { x, y, width } = display.bounds
 
     return {
       width: ISLAND_WIDTH,
       height: ISLAND_HEIGHT,
-      x: Math.round(x + width / 2 - ISLAND_WIDTH / 2),
+      x: Math.round(x + width - ISLAND_WIDTH - RIGHT_OFFSET),
       y: y + TOP_OFFSET
     }
   }

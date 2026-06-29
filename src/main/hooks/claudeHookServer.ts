@@ -52,7 +52,7 @@ export class ClaudeHookServer {
     response: http.ServerResponse
   ): Promise<void> {
     if (request.method !== 'POST' || request.url !== '/hooks/claude') {
-      this.writeJson(response, 404, { ok: false, error: 'not_found' })
+      this.writeJson(response, 404, { ok: false, error: '未找到接口' })
       return
     }
 
@@ -60,10 +60,9 @@ export class ClaudeHookServer {
       const payload = await readJsonBody(request)
       const nextState = mapClaudeHookToState(payload)
 
-      // Unknown hook events still return 200 so Claude CLI is never blocked by
-      // monitor-side version skew.
+      // 未识别的钩子事件也返回 200，避免监听器版本差异阻塞 Claude CLI。
       if (nextState) {
-        const source = payload.hook_event_name ?? payload.event ?? 'unknown'
+        const source = payload.hook_event_name ?? payload.event ?? '未知事件'
         this.stateManager.setClaudeState(nextState, String(source))
       }
 
@@ -91,7 +90,7 @@ function readJsonBody(request: http.IncomingMessage): Promise<ClaudeHookPayload>
       size += chunk.length
 
       if (size > 1024 * 1024) {
-        reject(new Error('request body is too large'))
+        reject(new Error('请求体过大'))
         request.destroy()
         return
       }
@@ -104,7 +103,7 @@ function readJsonBody(request: http.IncomingMessage): Promise<ClaudeHookPayload>
         const raw = Buffer.concat(chunks).toString('utf8') || '{}'
         resolve(JSON.parse(raw) as ClaudeHookPayload)
       } catch {
-        reject(new Error('invalid json body'))
+        reject(new Error('请求体不是合法 JSON'))
       }
     })
 

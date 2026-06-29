@@ -15,7 +15,7 @@ export const useMonitorStore = create<MonitorStore>((set) => ({
     if (!window.aiMonitor) {
       set({
         error:
-          'Electron preload API is unavailable. Restart the app after rebuilding the preload bundle.'
+          '预加载通信接口不可用。请重新构建并重启应用。'
       })
       return
     }

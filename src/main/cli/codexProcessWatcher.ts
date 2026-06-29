@@ -42,8 +42,8 @@ export class CodexProcessWatcher {
   private async poll(): Promise<void> {
     try {
       const processes = await listProcesses()
-      // Codex does not expose hooks, so v1 treats a matching process as the
-      // source of truth and requires two clean polls before returning idle.
+      // Codex 当前没有官方 Hook，v1 使用进程列表作为状态来源。
+      // 连续两次轮询都没有命中时才回到空闲，避免进程瞬时抖动。
       const hasCodex = processes.some((processInfo) =>
         isCodexProcess(processInfo, this.currentPid, this.currentPpid)
       )
@@ -53,7 +53,7 @@ export class CodexProcessWatcher {
 
         if (!this.running) {
           this.running = true
-          this.stateManager.setCodexState('running', 'process watcher')
+          this.stateManager.setCodexState('running', '进程监听')
         }
 
         return
@@ -63,12 +63,12 @@ export class CodexProcessWatcher {
 
       if (this.running && this.cleanPolls >= 2) {
         this.running = false
-        this.stateManager.setCodexState('idle', 'process watcher')
+        this.stateManager.setCodexState('idle', '进程监听')
       }
     } catch {
       if (this.running) {
         this.running = false
-        this.stateManager.setCodexState('idle', 'process watcher error')
+        this.stateManager.setCodexState('idle', '进程监听异常')
       }
     }
   }
@@ -86,8 +86,7 @@ export function isCodexProcess(
   const commandBase = path.basename(processInfo.command).toLowerCase()
   const args = processInfo.args.toLowerCase()
 
-  // Match both a direct binary invocation and common node/shim wrappers whose
-  // command line contains a codex executable path.
+  // 同时兼容直接运行 codex 二进制和通过 node/shim 包装启动的命令行。
   if (commandBase === 'codex' || commandBase === 'codex.exe') {
     return true
   }

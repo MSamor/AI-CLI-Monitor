@@ -12,15 +12,15 @@ export function Island({ agent }: { agent: AgentState }): JSX.Element {
         <div className="islandAgents">
           {activeItems.length === 0 ? (
             <div className="islandAgent islandAgent-idle">
-              <Activity size={16} />
-              <span>All idle</span>
+              <Activity size={11} />
+              <span>全部空闲</span>
             </div>
           ) : (
             activeItems.map((item) => (
               <div className={`islandAgent islandAgent-${item.state}`} key={item.name}>
-                {item.name === 'Claude' ? <Activity size={16} /> : <Terminal size={16} />}
+                {item.name === 'Claude' ? <Activity size={11} /> : <Terminal size={11} />}
                 <span>{item.name}</span>
-                <strong>{item.state}</strong>
+                <strong>{labelForAgentState(item.state)}</strong>
               </div>
             ))
           )}
@@ -49,12 +49,24 @@ function activeAgentItems(agent: AgentState): Array<{
 
 function islandTitle(agent: AgentState): string {
   if (agent.global === 'red') {
-    return 'AI agents running'
+    return '运行中'
   }
 
   if (agent.global === 'yellow') {
-    return 'Claude needs attention'
+    return '等待'
   }
 
-  return 'AI agents ready'
+  return '空闲'
+}
+
+function labelForAgentState(state: ClaudeState | CodexState): string {
+  if (state === 'running') {
+    return '运行'
+  }
+
+  if (state === 'waiting') {
+    return '等待'
+  }
+
+  return '空闲'
 }

@@ -1,6 +1,6 @@
 :root {
-  color: #17202a;
-  background: #f4f7f9;
+  color: #eef7ff;
+  background: #071016;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -12,14 +12,38 @@
 }
 
 body {
-  min-width: 760px;
+  min-width: 720px;
   margin: 0;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(0, 216, 255, 0.2), transparent 26%),
+    radial-gradient(circle at 88% 18%, rgba(255, 74, 112, 0.18), transparent 24%),
+    linear-gradient(135deg, #071016 0%, #101827 44%, #081315 100%);
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 34px 34px;
+  content: "";
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent);
 }
 
 .islandBody {
   min-width: 0;
   overflow: hidden;
-  background: transparent;
+  background: transparent !important;
+}
+
+.islandRoot {
+  background: transparent !important;
+}
+
+.islandBody::before {
+  display: none;
 }
 
 .islandBody #root {
@@ -29,332 +53,512 @@ body {
 
 button {
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   color: inherit;
   cursor: pointer;
   font: inherit;
+}
+
+button,
+.eventList,
+.inlineActions,
+.buttonGrid,
+.islandControls {
+  -webkit-app-region: no-drag;
 }
 
 .shell {
   display: flex;
   min-height: 100vh;
   flex-direction: column;
-  gap: 18px;
-  padding: 24px;
+  gap: 10px;
+  padding: 12px;
+  -webkit-app-region: drag;
+  animation: pageIn 420ms ease-out both;
 }
 
 .loading {
   margin: auto;
-  color: #566573;
+  color: #9fd8ff;
   font-size: 16px;
 }
 
 .errorPanel {
   margin: auto;
   max-width: 620px;
-  border: 1px solid #f0b7a8;
+  border: 1px solid rgba(255, 126, 100, 0.45);
   border-radius: 8px;
-  background: #fff5f2;
-  color: #8c2f20;
+  background: rgba(75, 22, 28, 0.82);
+  color: #ffd8cf;
   padding: 18px 20px;
   font-size: 14px;
   line-height: 1.55;
 }
 
-.statusBand {
+.windowChrome {
   display: flex;
-  min-height: 168px;
+  min-height: 24px;
   align-items: center;
   justify-content: space-between;
-  border-radius: 8px;
-  padding: 30px 34px;
+  color: #91a8b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.windowTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.windowActions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.windowActions button {
+  display: inline-grid;
+  width: 24px;
+  height: 22px;
+  place-items: center;
+  background: rgba(216, 240, 255, 0.1);
+  color: #d9f4ff;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.windowActions button:hover {
+  background: rgba(216, 240, 255, 0.18);
   color: #ffffff;
 }
 
+.statusBand {
+  position: relative;
+  display: flex;
+  min-height: 92px;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 16px 18px;
+  color: #ffffff;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+}
+
+.statusBand::before {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.18) 42%, transparent 64%),
+    radial-gradient(circle at 80% 48%, rgba(255, 255, 255, 0.18), transparent 28%);
+  content: "";
+  transform: translateX(-65%);
+  animation: scanGlow 4.8s ease-in-out infinite;
+}
+
+.statusBand > * {
+  position: relative;
+}
+
 .statusBand h1 {
-  margin: 8px 0 0;
-  font-size: 58px;
-  font-weight: 760;
+  margin: 4px 0 0;
+  font-size: 30px;
+  font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
 }
 
+.heroSubline {
+  max-width: 520px;
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .statusBand-green {
-  background: #1f7a54;
+  background: linear-gradient(135deg, #0c473b, #149563);
 }
 
 .statusBand-red {
-  background: #b63131;
+  background: linear-gradient(135deg, #5e1627, #d4353b);
 }
 
 .statusBand-yellow {
-  background: #a76915;
+  background: linear-gradient(135deg, #684313, #d98b24);
 }
 
 .eyebrow {
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 13px;
-  font-weight: 700;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 11px;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: uppercase;
 }
 
 .ledPreview {
+  position: relative;
   display: grid;
-  width: 96px;
-  height: 96px;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ledPreview::before,
+.ledPreview::after {
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  content: "";
+  animation: orbit 4.6s linear infinite;
+}
+
+.ledPreview::after {
+  inset: 12px;
+  animation-duration: 3.2s;
+  animation-direction: reverse;
 }
 
 .ledPreview span {
-  width: 54px;
-  height: 54px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 24px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 28px rgba(255, 255, 255, 0.82);
+  animation: ledBreath 1.8s ease-in-out infinite;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
+  gap: 10px;
 }
 
 .panel,
 .controlPanel,
 .logPanel {
-  border: 1px solid #dce3e8;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(172, 220, 255, 0.18);
   border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  background: rgba(10, 22, 32, 0.76);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
+  -webkit-app-region: drag;
+}
+
+.panel::before,
+.controlPanel::before,
+.logPanel::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent 42%);
+  content: "";
+  pointer-events: none;
 }
 
 .panel {
-  min-height: 184px;
-  padding: 20px;
+  min-height: 112px;
+  padding: 12px;
+  animation: riseIn 460ms ease-out both;
 }
 
 .sectionHeader {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 9px;
-  color: #314253;
+  gap: 7px;
+  color: #ccefff;
 }
 
 .sectionHeader h2 {
   margin: 0;
-  font-size: 15px;
-  font-weight: 760;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .stateValue {
-  margin-top: 22px;
-  font-size: 34px;
-  font-weight: 760;
+  position: relative;
+  margin-top: 9px;
+  font-size: 20px;
+  font-weight: 800;
   letter-spacing: 0;
-  text-transform: capitalize;
 }
 
 .stateValue-running,
 .stateValue-error,
 .stateValue-reconnecting {
-  color: #b63131;
+  color: #ff6472;
+  text-shadow: 0 0 22px rgba(255, 100, 114, 0.42);
 }
 
 .stateValue-waiting,
 .stateValue-scanning,
 .stateValue-connecting {
-  color: #a76915;
+  color: #ffc15a;
+  text-shadow: 0 0 22px rgba(255, 193, 90, 0.42);
 }
 
 .stateValue-idle,
 .stateValue-connected,
 .stateValue-mock {
-  color: #1f7a54;
+  color: #4ff0a6;
+  text-shadow: 0 0 22px rgba(79, 240, 166, 0.4);
 }
 
 .panel p {
-  margin: 8px 0 0;
-  color: #647487;
-  font-size: 14px;
+  position: relative;
+  margin: 5px 0 0;
+  color: #91a8b8;
+  font-size: 10px;
   line-height: 1.45;
 }
 
 .diagnostic {
-  color: #9b4f08 !important;
+  color: #ffc15a !important;
+}
+
+.bleHint {
+  color: #6f8798 !important;
 }
 
 .lastCommand {
-  color: #314253 !important;
+  color: #d9f4ff !important;
 }
 
 .inlineActions {
+  position: relative;
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 6px;
+  margin-top: 8px;
 }
 
 .inlineActions button,
 .commandButton,
 .islandControls button {
   display: inline-flex;
-  min-height: 38px;
+  min-height: 28px;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 0 12px;
-  background: #edf2f6;
-  color: #273746;
+  background: rgba(216, 240, 255, 0.12);
+  color: #e8f8ff;
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+  -webkit-app-region: no-drag;
+}
+
+.inlineActions button:hover,
+.commandButton:hover,
+.islandControls button:hover {
+  background: rgba(216, 240, 255, 0.2);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  transform: translateY(-1px);
 }
 
 .workspace {
   display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  gap: 16px;
-  min-height: 300px;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 210px;
 }
 
 .controlPanel,
 .logPanel {
-  padding: 20px;
+  padding: 12px;
 }
 
 .buttonGrid {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 20px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .commandButton {
-  min-height: 58px;
+  min-height: 36px;
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .commandButton-green {
-  background: #1f7a54;
+  background: linear-gradient(135deg, #128356, #1ed28d);
 }
 
 .commandButton-yellow {
-  background: #a76915;
+  background: linear-gradient(135deg, #a45f14, #f5aa37);
 }
 
 .commandButton-red {
-  background: #b63131;
+  background: linear-gradient(135deg, #8c1b2d, #f04d55);
 }
 
 .commandButton-blue {
-  background: #276c91;
+  background: linear-gradient(135deg, #145c89, #26b4ff);
 }
 
 .islandControls {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .islandStatus {
-  margin: 10px 0 0;
-  color: #647487;
-  font-size: 13px;
+  position: relative;
+  margin: 8px 0 0;
+  color: #91a8b8;
+  font-size: 11px;
 }
 
 .eventList {
+  position: relative;
   display: flex;
-  max-height: 336px;
+  max-height: 160px;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 6px;
+  margin-top: 10px;
   overflow: auto;
   padding-right: 4px;
 }
 
 .event {
   display: grid;
-  grid-template-columns: 90px minmax(0, 1fr);
-  gap: 12px;
-  border-left: 3px solid #c9d4dd;
-  padding: 8px 10px;
-  color: #273746;
-  font-size: 13px;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 9px;
+  border-left: 3px solid rgba(122, 208, 255, 0.5);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 6px 8px;
+  color: #d9f4ff;
+  font-size: 11px;
   line-height: 1.35;
+  animation: eventIn 260ms ease-out both;
 }
 
 .event time {
-  color: #6d7d8c;
+  color: #87a4b8;
   font-variant-numeric: tabular-nums;
 }
 
 .event-warning {
-  border-color: #c57d1c;
+  border-color: #ffc15a;
 }
 
 .event-error {
-  border-color: #b63131;
+  border-color: #ff6472;
 }
 
 .empty {
-  color: #7f8c8d;
-  font-size: 14px;
+  color: #91a8b8;
+  font-size: 12px;
 }
 
 .island {
+  position: relative;
   display: grid;
   width: 100vw;
   height: 100vh;
-  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-columns: 12px minmax(0, 1fr);
   align-items: center;
-  gap: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 38px;
-  background: rgba(17, 21, 26, 0.94);
-  color: #ffffff;
-  padding: 18px 24px;
+  gap: 7px;
   overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 18% 50%, rgba(76, 240, 166, 0.28), transparent 32%),
+    linear-gradient(135deg, rgba(8, 12, 18, 0.98), rgba(18, 25, 36, 0.94));
+  color: #ffffff;
+  padding: 3px 8px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   user-select: none;
   -webkit-app-region: drag;
+  animation: islandEnter 320ms cubic-bezier(0.2, 0.9, 0.2, 1.15) both;
+}
+
+.island-red {
+  background:
+    radial-gradient(circle at 18% 50%, rgba(255, 82, 102, 0.36), transparent 32%),
+    linear-gradient(135deg, rgba(16, 8, 13, 0.98), rgba(38, 18, 24, 0.94));
+}
+
+.island-yellow {
+  background:
+    radial-gradient(circle at 18% 50%, rgba(255, 193, 90, 0.34), transparent 32%),
+    linear-gradient(135deg, rgba(20, 13, 7, 0.98), rgba(42, 29, 15, 0.94));
 }
 
 .island::before {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0));
+  background:
+    linear-gradient(110deg, transparent, rgba(255, 255, 255, 0.18), transparent),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 40%);
   content: "";
   pointer-events: none;
+  transform: translateX(-58%);
+  animation: islandSweep 3.6s ease-in-out infinite;
 }
 
 .islandPulse {
-  width: 38px;
-  height: 38px;
+  position: relative;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #1f7a54;
-  box-shadow: 0 0 28px rgba(31, 122, 84, 0.72);
+  background: #4ff0a6;
+  box-shadow: 0 0 16px rgba(79, 240, 166, 0.72);
+  animation: pulse 1.7s ease-in-out infinite;
+}
+
+.islandPulse::after {
+  position: absolute;
+  inset: -4px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.26);
+  content: "";
+  animation: ripple 1.7s ease-out infinite;
 }
 
 .island-red .islandPulse {
-  background: #e34b4b;
-  box-shadow: 0 0 30px rgba(227, 75, 75, 0.82);
+  background: #ff5266;
+  box-shadow: 0 0 16px rgba(255, 82, 102, 0.82);
 }
 
 .island-yellow .islandPulse {
-  background: #f1a33a;
-  box-shadow: 0 0 30px rgba(241, 163, 58, 0.8);
+  background: #ffc15a;
+  box-shadow: 0 0 16px rgba(255, 193, 90, 0.8);
 }
 
 .islandContent {
   position: relative;
+  display: flex;
+  min-height: 18px;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
 }
 
 .islandTitle {
+  flex: 0 0 auto;
   overflow: hidden;
-  font-size: 17px;
-  font-weight: 760;
+  font-size: 10px;
+  font-weight: 800;
   letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -362,23 +566,25 @@ button {
 
 .islandAgents {
   display: flex;
-  gap: 8px;
-  margin-top: 9px;
+  min-width: 0;
+  gap: 4px;
+  margin-top: 0;
   overflow: hidden;
 }
 
 .islandAgent {
   display: inline-flex;
-  max-width: 168px;
-  min-height: 27px;
+  max-width: 58px;
+  min-height: 14px;
   align-items: center;
-  gap: 6px;
-  border-radius: 18px;
+  gap: 3px;
+  border-radius: 7px;
   background: rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.88);
-  padding: 0 10px;
-  font-size: 12px;
+  padding: 0 4px;
+  font-size: 9px;
   white-space: nowrap;
+  animation: chipIn 260ms ease-out both;
 }
 
 .islandAgent span,
@@ -389,19 +595,135 @@ button {
 
 .islandAgent strong {
   color: #ffffff;
-  font-weight: 760;
+  font-weight: 800;
 }
 
 .islandAgent-running {
-  background: rgba(227, 75, 75, 0.24);
+  background: rgba(255, 82, 102, 0.3);
 }
 
 .islandAgent-waiting {
-  background: rgba(241, 163, 58, 0.26);
+  background: rgba(255, 193, 90, 0.3);
 }
 
 .islandAgent-idle {
-  background: rgba(31, 122, 84, 0.28);
+  background: rgba(79, 240, 166, 0.26);
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scanGlow {
+  0%,
+  22% {
+    transform: translateX(-70%);
+  }
+  58%,
+  100% {
+    transform: translateX(72%);
+  }
+}
+
+@keyframes orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ledBreath {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.76;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes eventIn {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes islandEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes islandSweep {
+  0%,
+  28% {
+    transform: translateX(-65%);
+  }
+  70%,
+  100% {
+    transform: translateX(65%);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(0.94);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.4);
+  }
+}
+
+@keyframes chipIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 900px) {
@@ -412,6 +734,12 @@ button {
   .grid,
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .statusBand {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 22px;
   }
 
   .statusBand h1 {

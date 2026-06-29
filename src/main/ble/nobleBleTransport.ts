@@ -7,6 +7,10 @@ import {
 import type { BleSnapshot, LedCommand } from '../../shared/types'
 import { BleTransport, errorMessage } from './bleTransport'
 
+const SCAN_TIMEOUT_MS = 8000
+const BASE_RECONNECT_MS = 2500
+const MAX_RECONNECT_MS = 9000
+
 export class NobleBleTransport extends BleTransport {
   readonly mode = 'noble' as const
 
@@ -18,7 +22,10 @@ export class NobleBleTransport extends BleTransport {
 
   private peripheral?: Peripheral
   private rxCharacteristic?: Characteristic
+  private connectingPeripheralId?: string
+  private scanTimer?: NodeJS.Timeout
   private reconnectTimer?: NodeJS.Timeout
+  private reconnectAttempts = 0
   private started = false
 
   async start(): Promise<void> {
@@ -32,6 +39,7 @@ export class NobleBleTransport extends BleTransport {
   }
 
   async stop(): Promise<void> {
+    this.clearScanTimer()
     this.clearReconnectTimer()
     noble.off('stateChange', this.handleStateChange)
     noble.off('discover', this.handleDiscover)
@@ -45,12 +53,13 @@ export class NobleBleTransport extends BleTransport {
 
     this.peripheral = undefined
     this.rxCharacteristic = undefined
+    this.connectingPeripheralId = undefined
     this.updateSnapshot({ state: 'idle', diagnostic: undefined })
   }
 
   async send(command: LedCommand): Promise<void> {
     if (!this.rxCharacteristic) {
-      throw new Error('BLE device is not connected.')
+      throw new Error('蓝牙设备尚未连接。')
     }
 
     await this.rxCharacteristic.writeAsync(Buffer.from(command, 'utf8'), false)
@@ -67,8 +76,11 @@ export class NobleBleTransport extends BleTransport {
       return
     }
 
+    this.clearScanTimer()
+    this.clearReconnectTimer()
     this.rxCharacteristic = undefined
     this.peripheral = undefined
+    this.connectingPeripheralId = undefined
     this.updateSnapshot({
       state: 'error',
       diagnostic: this.diagnosticForNobleState(state)
@@ -76,9 +88,7 @@ export class NobleBleTransport extends BleTransport {
   }
 
   private handleDiscover = (peripheral: Peripheral): void => {
-    const localName = peripheral.advertisement.localName
-
-    if (localName !== BLE_DEVICE_NAME) {
+    if (!this.matchesTargetPeripheral(peripheral)) {
       return
     }
 
@@ -86,42 +96,59 @@ export class NobleBleTransport extends BleTransport {
   }
 
   private async scan(): Promise<void> {
-    if (this.rxCharacteristic) {
+    if (!this.started || this.rxCharacteristic || this.connectingPeripheralId) {
       return
     }
 
-    this.updateSnapshot({ state: 'scanning', diagnostic: undefined })
+    this.clearScanTimer()
+    this.updateSnapshot({
+      state: 'scanning',
+      diagnostic: `正在扫描 ${BLE_DEVICE_NAME}。BLE GATT 不需要在系统蓝牙里手动配对。`
+    })
 
     try {
       await this.stopScanning()
 
       if (noble.startScanningAsync) {
-        await noble.startScanningAsync([], false)
+        await noble.startScanningAsync([NUS_SERVICE_UUID], false)
       } else {
-        noble.startScanning([], false)
+        noble.startScanning([NUS_SERVICE_UUID], false)
       }
+
+      this.scanTimer = setTimeout(() => {
+        void this.handleScanTimeout()
+      }, SCAN_TIMEOUT_MS)
     } catch (error) {
       this.updateSnapshot({
         state: 'error',
-        diagnostic: `BLE scan failed: ${errorMessage(error)}`
+        diagnostic: `蓝牙扫描失败：${errorMessage(error)}`
       })
+      this.scheduleReconnect()
     }
   }
 
   private async connect(peripheral: Peripheral): Promise<void> {
-    if (this.rxCharacteristic || this.snapshot.state === 'connecting') {
+    if (this.rxCharacteristic || this.connectingPeripheralId) {
       return
     }
 
-    this.updateSnapshot({ state: 'connecting', deviceName: BLE_DEVICE_NAME })
+    this.clearScanTimer()
+    this.connectingPeripheralId = peripheral.id
+    this.updateSnapshot({
+      state: 'connecting',
+      deviceName: peripheral.advertisement.localName ?? BLE_DEVICE_NAME,
+      diagnostic: '已发现目标设备，正在建立 GATT 连接。'
+    })
 
     try {
       await this.stopScanning()
       this.peripheral = peripheral
-      await peripheral.connectAsync()
 
-      // Pico exposes a Nordic UART compatible service. Electron only writes to
-      // RX; TX exists for compatibility and future diagnostics.
+      if (peripheral.state !== 'connected') {
+        await peripheral.connectAsync()
+      }
+
+      // Pico 暴露 Nordic UART 兼容服务。桌面端只写 RX，TX 保留给后续诊断。
       const { characteristics } =
         await peripheral.discoverSomeServicesAndCharacteristicsAsync(
           [NUS_SERVICE_UUID],
@@ -133,21 +160,25 @@ export class NobleBleTransport extends BleTransport {
       )
 
       if (!rxCharacteristic) {
-        throw new Error('Nordic UART RX characteristic was not found.')
+        throw new Error('未找到 Nordic UART RX 写入特征。')
       }
 
       this.rxCharacteristic = rxCharacteristic
+      this.connectingPeripheralId = undefined
+      this.reconnectAttempts = 0
       peripheral.once('disconnect', this.handleDisconnect)
       this.updateSnapshot({
         state: 'connected',
-        deviceName: BLE_DEVICE_NAME,
-        diagnostic: undefined
+        deviceName: peripheral.advertisement.localName ?? BLE_DEVICE_NAME,
+        diagnostic: '已连接硬件，状态会自动同步到 Pico。'
       })
     } catch (error) {
       this.rxCharacteristic = undefined
+      this.connectingPeripheralId = undefined
+      await peripheral.disconnectAsync().catch(() => undefined)
       this.updateSnapshot({
         state: 'error',
-        diagnostic: `BLE connect failed: ${errorMessage(error)}`
+        diagnostic: `蓝牙连接失败：${errorMessage(error)}`
       })
       this.scheduleReconnect()
     }
@@ -156,20 +187,32 @@ export class NobleBleTransport extends BleTransport {
   private handleDisconnect = (): void => {
     this.rxCharacteristic = undefined
     this.peripheral = undefined
+    this.connectingPeripheralId = undefined
     this.updateSnapshot({
       state: 'reconnecting',
-      diagnostic: 'BLE device disconnected. Reconnecting...'
+      diagnostic: '蓝牙设备已断开，正在自动重连...'
     })
     this.scheduleReconnect()
   }
 
   private scheduleReconnect(): void {
+    if (!this.started) {
+      return
+    }
+
     this.clearReconnectTimer()
+    const delayMs = Math.min(BASE_RECONNECT_MS + this.reconnectAttempts * 750, MAX_RECONNECT_MS)
+    this.reconnectAttempts += 1
+    this.updateSnapshot({
+      state: 'reconnecting',
+      diagnostic: `${Math.round(delayMs / 1000)} 秒后重新扫描 ${BLE_DEVICE_NAME}。`
+    })
+
     this.reconnectTimer = setTimeout(() => {
       if (noble.state === 'poweredOn') {
         void this.scan()
       }
-    }, 2000)
+    }, delayMs)
   }
 
   private clearReconnectTimer(): void {
@@ -179,6 +222,24 @@ export class NobleBleTransport extends BleTransport {
     }
   }
 
+  private clearScanTimer(): void {
+    if (this.scanTimer) {
+      clearTimeout(this.scanTimer)
+      this.scanTimer = undefined
+    }
+  }
+
+  private async handleScanTimeout(): Promise<void> {
+    this.scanTimer = undefined
+
+    if (!this.started || this.rxCharacteristic || this.connectingPeripheralId) {
+      return
+    }
+
+    await this.stopScanning()
+    this.scheduleReconnect()
+  }
+
   private async stopScanning(): Promise<void> {
     if (noble.stopScanningAsync) {
       await noble.stopScanningAsync().catch(() => undefined)
@@ -186,6 +247,17 @@ export class NobleBleTransport extends BleTransport {
     }
 
     noble.stopScanning()
+  }
+
+  private matchesTargetPeripheral(peripheral: Peripheral): boolean {
+    const localName = peripheral.advertisement.localName
+    const serviceUuids = peripheral.advertisement.serviceUuids ?? []
+
+    const hasTargetService = serviceUuids.some(
+      (serviceUuid) => normalizeUuid(serviceUuid) === NUS_SERVICE_UUID
+    )
+
+    return localName === BLE_DEVICE_NAME || (!localName && hasTargetService)
   }
 
   private updateSnapshot(next: Partial<BleSnapshot>): void {
@@ -199,13 +271,17 @@ export class NobleBleTransport extends BleTransport {
   private diagnosticForNobleState(state: NobleState): string {
     switch (state) {
       case 'poweredOff':
-        return 'Bluetooth is powered off.'
+        return '系统蓝牙未开启。'
       case 'unauthorized':
-        return 'Bluetooth permission is not granted to this app.'
+        return '当前应用没有蓝牙权限。'
       case 'unsupported':
-        return 'Bluetooth LE is unsupported by this platform or adapter.'
+        return '当前系统或蓝牙适配器不支持 BLE。'
       default:
-        return `Bluetooth adapter is not ready: ${state}.`
+        return `蓝牙适配器未就绪：${state}。`
     }
   }
+}
+
+function normalizeUuid(uuid: string): string {
+  return uuid.replaceAll('-', '').toLowerCase()
 }

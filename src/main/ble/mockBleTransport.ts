@@ -8,7 +8,7 @@ export class MockBleTransport extends BleTransport {
     mode: 'mock',
     state: 'mock',
     deviceName: 'AI_LED_MOCK',
-    diagnostic: 'Mock BLE transport is active.'
+    diagnostic: '当前使用模拟蓝牙通道，不会连接真实硬件。'
   }
 
   constructor(diagnostic?: string) {

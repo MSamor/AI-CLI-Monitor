@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import { IPC_CHANNELS } from '../shared/ipc'
 import type { LedCommand } from '../shared/types'
 import { createBleTransport } from './ble/createBleTransport'
@@ -10,8 +10,7 @@ export function registerIpc(
   stateManager: StateManager,
   desktopIsland: DesktopIslandController
 ): void {
-  // The renderer only talks through these handlers; all Node/Electron side
-  // effects stay in the main process.
+  // 渲染进程只通过这些 handler 通信，所有 Node/Electron 副作用都留在主进程。
   ipcMain.handle(IPC_CHANNELS.getSnapshot, () => stateManager.getSnapshot())
 
   ipcMain.handle(IPC_CHANNELS.setManualLed, async (_event, command: LedCommand) => {
@@ -20,13 +19,13 @@ export function registerIpc(
 
   ipcMain.handle(IPC_CHANNELS.reconnectBle, async () => {
     const ble = await createBleTransport(process.env.AI_MONITOR_BLE === 'mock')
-    await stateManager.replaceBleTransport(ble, 'BLE transport recreated.')
+    await stateManager.replaceBleTransport(ble, '蓝牙通道已重新创建。')
   })
 
   ipcMain.handle(IPC_CHANNELS.useMockBle, async () => {
     await stateManager.replaceBleTransport(
-      new MockBleTransport('Mock BLE transport was selected from the dashboard.'),
-      'Switched to mock BLE transport.'
+      new MockBleTransport('已从客户端切换到模拟蓝牙通道。'),
+      '已切换为模拟蓝牙通道。'
     )
   })
 
@@ -37,5 +36,13 @@ export function registerIpc(
     }
 
     desktopIsland.hide()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.minimizeWindow, async (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
+  })
+
+  ipcMain.handle(IPC_CHANNELS.closeWindow, async (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
   })
 }

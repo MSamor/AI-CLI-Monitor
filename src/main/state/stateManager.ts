@@ -51,8 +51,7 @@ export class StateManager extends EventEmitter {
     await this.ble.start()
     await this.flushGlobalState(true)
 
-    // Hardware LEDs can miss a write during reconnects, so the current state is
-    // periodically resent even when no agent state changed.
+    // 硬件在重连瞬间可能漏掉一次写入，所以定时重发当前全局状态。
     this.resendTimer = setInterval(() => {
       void this.flushGlobalState(true)
     }, this.resendMs)
@@ -84,7 +83,7 @@ export class StateManager extends EventEmitter {
   }
 
   async reconnectBle(): Promise<void> {
-    this.addEvent('info', 'Restarting BLE transport.')
+    this.addEvent('info', '正在重启蓝牙通道。')
     await this.ble.stop().catch(() => undefined)
     await this.ble.start()
     await this.flushGlobalState(true)
@@ -92,11 +91,11 @@ export class StateManager extends EventEmitter {
   }
 
   setClaudeState(next: ClaudeState, source: string): void {
-    this.updateAgent({ claude: next }, `Claude is ${next} (${source}).`)
+    this.updateAgent({ claude: next }, `Claude 状态变更为「${labelForAgentState(next)}」（${source}）。`)
   }
 
   setCodexState(next: CodexState, source: string): void {
-    this.updateAgent({ codex: next }, `Codex is ${next} (${source}).`)
+    this.updateAgent({ codex: next }, `Codex 状态变更为「${labelForAgentState(next)}」（${source}）。`)
   }
 
   setDesktopIslandEnabled(enabled: boolean, visible = enabled): void {
@@ -105,7 +104,7 @@ export class StateManager extends EventEmitter {
     }
 
     this.island = { enabled, visible }
-    this.addEvent('info', `Desktop island ${enabled ? 'enabled' : 'disabled'}.`)
+    this.addEvent('info', `桌面灵动岛已${enabled ? '开启' : '关闭'}。`)
     this.emitSnapshot()
   }
 
@@ -124,7 +123,7 @@ export class StateManager extends EventEmitter {
   async setManualLed(command: LedCommand): Promise<void> {
     await this.ble.send(command)
     this.lastSentCommand = command
-    this.addEvent('info', `Manual LED command sent: ${command}.`)
+    this.addEvent('info', `已发送手动灯控指令：${command}。`)
     this.emitSnapshot()
   }
 
@@ -148,8 +147,7 @@ export class StateManager extends EventEmitter {
       const becameReady = ready && !this.bleReady
       this.bleReady = ready
 
-      // Only force a send on the transition into a ready BLE state. A write
-      // also updates BLE status, so this guard prevents a send/status loop.
+      // 只有蓝牙从不可用变为可写时才强制补发，避免“写入 -> 状态回调 -> 再写入”的循环。
       if (becameReady && !this.flushing) {
         void this.flushGlobalState(true)
       }
@@ -177,8 +175,7 @@ export class StateManager extends EventEmitter {
       global: nextGlobal
     }
 
-    // Agent state changes are pushed to the UI immediately, while BLE writes
-    // are debounced so brief process/hook transitions do not flicker the LED.
+    // UI 需要立即看到每个 CLI 的状态；硬件灯写入会防抖，避免短暂状态抖动造成闪烁。
     this.addEvent('info', message)
     this.scheduleFlush()
     this.emitSnapshot()
@@ -201,8 +198,7 @@ export class StateManager extends EventEmitter {
 
     const command = ledCommandForGlobalState(this.agent.global)
 
-    // Hardware only needs the global color. The desktop island still receives
-    // the full per-CLI state through snapshots for multi-agent display.
+    // 硬件只需要全局颜色；桌面灵动岛通过快照展示每个 CLI 的独立状态。
     if (!force && command === this.lastSentCommand) {
       return
     }
@@ -212,9 +208,9 @@ export class StateManager extends EventEmitter {
     try {
       await this.ble.send(command)
       this.lastSentCommand = command
-      this.addEvent('info', `LED command sent: ${command}.`)
+      this.addEvent('info', `已同步硬件灯状态：${command}。`)
     } catch (error) {
-      this.addEvent('warning', `LED command failed: ${errorMessage(error)}`)
+      this.addEvent('warning', `硬件灯同步失败：${errorMessage(error)}`)
     } finally {
       this.flushing = false
     }
@@ -236,4 +232,16 @@ export class StateManager extends EventEmitter {
   private emitSnapshot(): void {
     this.emit('snapshot', this.getSnapshot())
   }
+}
+
+function labelForAgentState(state: ClaudeState | CodexState): string {
+  if (state === 'running') {
+    return '运行中'
+  }
+
+  if (state === 'waiting') {
+    return '等待中'
+  }
+
+  return '空闲'
 }
