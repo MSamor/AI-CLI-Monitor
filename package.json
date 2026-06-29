@@ -2,7 +2,7 @@
   "name": "ai-cli-monitor",
   "version": "0.1.0",
   "description": "AI CLI 状态监听桌面工具，支持灵动岛与 BLE 指示灯。",
-  "author": "maosi",
+  "author": "maosi <maosi@users.noreply.github.com>",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -15,13 +15,15 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@abandonware/noble": "^1.9.2-25",
     "@electron-toolkit/preload": "^3.0.1",
     "framer-motion": "^12.42.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^4.5.5"
+  },
+  "optionalDependencies": {
+    "@abandonware/noble": "^1.9.2-25"
   },
   "devDependencies": {
     "@types/node": "^20.14.15",
@@ -42,6 +44,7 @@
     "productName": "AI CLI Monitor",
     "copyright": "Copyright © 2026",
     "asar": true,
+    "npmRebuild": false,
     "asarUnpack": [
       "**/*.node",
       "node_modules/@abandonware/noble/**",
@@ -78,6 +81,7 @@
     },
     "linux": {
       "category": "Development",
+      "maintainer": "maosi <maosi@users.noreply.github.com>",
       "target": [
         "AppImage",
         "deb"

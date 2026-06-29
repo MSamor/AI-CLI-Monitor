@@ -20,7 +20,7 @@ jobs:
           - name: macOS
             os: macos-latest
           - name: Windows
-            os: windows-latest
+            os: windows-2022
           - name: Linux
             os: ubuntu-latest
 
@@ -33,6 +33,19 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
+      - name: 固定 Windows Python
+        if: runner.os == 'Windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 配置 Windows 原生模块编译环境
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          npm config set msvs_version 2022
+          npm config set python "$env:pythonLocation\python.exe"
 
       - name: 安装 Linux 蓝牙构建依赖
         if: runner.os == 'Linux'

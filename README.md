@@ -53,6 +53,8 @@ git push origin v0.1.0
 
 推送 `v*` 标签后，`.github/workflows/release.yml` 会在 macOS、Windows、Linux 三个平台自动构建客户端，并把产物上传到对应 GitHub Release。也可以在 GitHub Actions 页面手动触发「构建 Release 客户端」工作流；手动触发时会生成 workflow artifact，但只有 tag 触发会发布到 Release。
 
+Windows / Linux 的真实蓝牙依赖是可选原生模块；如果 CI 或用户环境无法编译/加载 `@abandonware/noble`，客户端仍会正常启动，并自动回退到模拟蓝牙通道。macOS 包含真实 BLE 支持。
+
 当前项目不保留单元测试文件，也没有 `npm test` 脚本。
 
 ## 客户端怎么用
