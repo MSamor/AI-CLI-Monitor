@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AiMonitorApi, SnapshotListener } from '../shared/api'
+import type { AiMonitorApi, DesktopIslandBlurListener, SnapshotListener } from '../shared/api'
 import { IPC_CHANNELS } from '../shared/ipc'
 import type { LedCommand, MonitorSnapshot } from '../shared/types'
 
@@ -15,6 +15,17 @@ const api: AiMonitorApi = {
 
     return () => {
       ipcRenderer.off(IPC_CHANNELS.snapshotChanged, handler)
+    }
+  },
+  onDesktopIslandBlurred: (listener: DesktopIslandBlurListener) => {
+    const handler = (): void => {
+      listener()
+    }
+
+    ipcRenderer.on(IPC_CHANNELS.desktopIslandBlurred, handler)
+
+    return () => {
+      ipcRenderer.off(IPC_CHANNELS.desktopIslandBlurred, handler)
     }
   },
   setManualLed: (command: LedCommand) => ipcRenderer.invoke(IPC_CHANNELS.setManualLed, command),

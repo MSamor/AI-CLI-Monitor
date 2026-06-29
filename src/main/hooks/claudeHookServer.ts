@@ -95,10 +95,7 @@ export class ClaudeHookServer {
   private handleCodexPayload(payload: ClaudeHookPayload, response: http.ServerResponse): void {
     const nextState = mapCodexActivityToState(payload)
 
-    if (nextState) {
-      const source = payload.hook_event_name ?? payload.event ?? payload.state ?? 'Codex 活动'
-      this.stateManager.setCodexState(nextState, String(source))
-    }
+    this.stateManager.setCodexHookActivity(payload, nextState)
 
     this.writeJson(response, 200, { ok: true, state: nextState ?? null })
   }

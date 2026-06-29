@@ -16,6 +16,7 @@ import type {
   BleConnectionState,
   BleSnapshot,
   ClaudeState,
+  CodexActivitySnapshot,
   CodexState,
   GlobalState,
   LedCommand,
@@ -94,6 +95,10 @@ export function App(): JSX.Element {
           <p className="heroSubline">{globalDescription(snapshot.agent.global)}</p>
         </div>
         <div className="statusCluster" aria-label={`当前 AI 输出状态：${labelForGlobal(snapshot.agent.global)}`}>
+          <div className={`activeCliChip activeCliChip-${snapshot.agent.global}`}>
+            <span className="activeCliDot" />
+            <strong>{activeCliLabel(snapshot.agent.claude, snapshot.agent.codex)}</strong>
+          </div>
           <div className="statusClusterItem">
             <strong>{activeCount(snapshot.agent.claude, snapshot.agent.codex)}</strong>
             <span>生成源</span>
@@ -116,6 +121,7 @@ export function App(): JSX.Element {
           label="Codex"
           state={snapshot.agent.codex}
           detail={agentDetail('Codex', snapshot.agent.codex)}
+          activity={snapshot.codexActivity}
         />
         <BlePanel ble={snapshot.ble} />
       </section>
@@ -173,17 +179,21 @@ function AgentTrack({
   icon,
   label,
   state,
-  detail
+  detail,
+  activity
 }: {
   icon: JSX.Element
   label: string
   state: ClaudeState | CodexState
   detail: string
+  activity?: CodexActivitySnapshot
 }): JSX.Element {
   return (
     <div className={`panel agentPanel agentPanel-${state}`}>
       <div className="sectionHeader">
-        {icon}
+        <span className={`agentLogo agentLogo-${state}`} aria-hidden="true">
+          {icon}
+        </span>
         <h2>{label}</h2>
         <span className={`statusPill statusPill-${state}`}>{labelForAgentState(state)}</span>
       </div>
@@ -193,6 +203,16 @@ function AgentTrack({
         <span />
       </div>
       <p>{detail}</p>
+      {activity ? (
+        <p className="codexStep">
+          {activity.label}
+          {activity.toolName ? ` · ${activity.toolName}` : ''}
+        </p>
+      ) : null}
+      {activity?.command ? <p className="codexCommand">{activity.command}</p> : null}
+      {activity?.turnId || activity?.model ? (
+        <p className="codexMeta">{[activity.turnId, activity.model].filter(Boolean).join(' · ')}</p>
+      ) : null}
     </div>
   )
 }
@@ -250,6 +270,23 @@ function EventLog({ events }: { events: MonitorEvent[] }): JSX.Element {
 
 function activeCount(claude: ClaudeState, codex: CodexState): number {
   return [claude, codex].filter((state) => state === 'running').length
+}
+
+function activeCliLabel(claude: ClaudeState, codex: CodexState): string {
+  const names = [
+    claude === 'running' ? 'Claude' : undefined,
+    codex === 'running' ? 'Codex' : undefined
+  ].filter(Boolean)
+
+  if (names.length > 0) {
+    return `${names.join(' / ')} 正在生成`
+  }
+
+  if (claude === 'waiting') {
+    return 'Claude 等待确认'
+  }
+
+  return '暂无 AI 生成'
 }
 
 function labelForGlobal(state: GlobalState): string {

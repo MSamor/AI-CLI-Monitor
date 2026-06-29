@@ -1,11 +1,12 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
+import { IPC_CHANNELS } from '../../shared/ipc'
 import type { StateManager } from '../state/stateManager'
 
 const COMPACT_WIDTH = 352
 const COMPACT_HEIGHT = 38
 const EXPANDED_WIDTH = 500
-const EXPANDED_HEIGHT = 220
+const EXPANDED_HEIGHT = 252
 const TOP_OFFSET = 2
 const EDGE_PADDING = 8
 
@@ -56,6 +57,9 @@ export class DesktopIslandController {
     this.window.once('ready-to-show', () => {
       this.window?.showInactive()
       this.stateManager.setDesktopIslandEnabled(true, true)
+    })
+    this.window.on('blur', () => {
+      this.window?.webContents.send(IPC_CHANNELS.desktopIslandBlurred)
     })
     this.window.on('closed', () => {
       this.window = undefined

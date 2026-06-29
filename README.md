@@ -81,9 +81,34 @@ http://127.0.0.1:17361/hooks/claude
 
 Codex 进程存在不等于 AI 正在输出。应用仍会每秒扫描一次系统进程列表，但这只用来记录「Codex CLI 已打开」，不会点亮红灯。
 
-要让 Codex 显示为「生成输出中」，推荐用 wrapper 启动：
+推荐按官方 Codex hooks 配置，把 Codex 的 lifecycle 事件转发给本工具：
 
-macOS / Linux：
+```bash
+cp scripts/codex-hooks.json ~/.codex/hooks.json
+```
+
+然后把 `~/.codex/hooks.json` 里的 `/你的绝对路径/ai-cli-monitor/scripts/codex-hook.js` 改成当前项目的绝对路径。
+
+当前模板监听这些官方事件：
+
+- `SessionStart`：Codex 会话开始。
+- `UserPromptSubmit`：用户提交新 prompt，本轮开始。
+- `PreToolUse`：即将执行工具，会展示 `tool_name`、`tool_use_id` 和 `tool_input.command`。
+- `PermissionRequest` / `Notification`：等待授权或用户确认。
+- `PostToolUse`：工具执行完成，会保留工具名和本次响应摘要。
+- `PreCompact`：上下文即将压缩。
+- `SubagentStop`：子任务完成。
+- `Stop` / `SessionEnd`：本轮或会话结束，会回到未生成状态。
+
+hook 脚本会读取 Codex 通过 stdin 传入的 JSON，并转发到：
+
+```text
+http://127.0.0.1:17361/hooks/codex
+```
+
+客户端和灵动岛会展示当前 Codex 阶段、工具名、命令、`turn_id`、`model`、`cwd` 和最近助手消息摘要。
+
+如果暂时不配置官方 hooks，也可以继续用 wrapper 做粗粒度兜底：
 
 ```bash
 ./scripts/codex-wrapper.sh
@@ -94,8 +119,6 @@ Windows PowerShell：
 ```powershell
 .\scripts\codex-wrapper.ps1
 ```
-
-也可以把 wrapper 配成自己的 shell alias。wrapper 会在 Codex 会话开始时向 `http://127.0.0.1:17361/hooks/codex` 上报 `generating`，退出时上报 `idle`。
 
 ## 蓝牙协议
 

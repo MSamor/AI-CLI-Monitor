@@ -6,6 +6,7 @@ export const IPC_CHANNELS = {
   useMockBle: 'monitor:use-mock-ble',
   setDesktopIslandEnabled: 'monitor:set-desktop-island-enabled',
   setDesktopIslandExpanded: 'monitor:set-desktop-island-expanded',
+  desktopIslandBlurred: 'monitor:desktop-island-blurred',
   minimizeWindow: 'window:minimize',
   closeWindow: 'window:close'
 } as const

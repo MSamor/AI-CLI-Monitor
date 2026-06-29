@@ -1,9 +1,16 @@
 import { EventEmitter } from 'node:events'
 import { ledCommandForGlobalState } from '../../shared/protocol'
-import { computeGlobalState, DEFAULT_AGENT_STATE } from '../../shared/state'
+import {
+  computeGlobalState,
+  createCodexActivitySnapshot,
+  DEFAULT_AGENT_STATE,
+  DEFAULT_CODEX_ACTIVITY
+} from '../../shared/state'
 import type {
   AgentState,
   ClaudeState,
+  ClaudeHookPayload,
+  CodexActivitySnapshot,
   CodexState,
   LedCommand,
   MonitorEvent,
@@ -20,6 +27,7 @@ type StateManagerOptions = {
 
 export class StateManager extends EventEmitter {
   private agent: AgentState = { ...DEFAULT_AGENT_STATE }
+  private codexActivity: CodexActivitySnapshot = { ...DEFAULT_CODEX_ACTIVITY }
   private island = {
     enabled: false,
     visible: false
@@ -98,6 +106,21 @@ export class StateManager extends EventEmitter {
     this.updateAgent({ codex: next }, `Codex 状态变更为「${labelForAgentState(next)}」（${source}）。`)
   }
 
+  setCodexHookActivity(payload: ClaudeHookPayload, nextState?: CodexState): void {
+    this.codexActivity = createCodexActivitySnapshot(payload)
+
+    if (nextState) {
+      this.updateAgent(
+        { codex: nextState },
+        `Codex 官方 hook：${this.codexActivity.label}。${this.codexActivity.detail}`
+      )
+      return
+    }
+
+    this.addEvent('info', `Codex 官方 hook：${this.codexActivity.label}。`)
+    this.emitSnapshot()
+  }
+
   recordProcessObservation(message: string): void {
     this.addEvent('info', message)
     this.emitSnapshot()
@@ -135,6 +158,7 @@ export class StateManager extends EventEmitter {
   getSnapshot(): MonitorSnapshot {
     return {
       agent: { ...this.agent },
+      codexActivity: { ...this.codexActivity },
       ble: this.ble.getSnapshot(),
       island: { ...this.island },
       events: [...this.events]
@@ -202,9 +226,17 @@ export class StateManager extends EventEmitter {
     }
 
     const command = ledCommandForGlobalState(this.agent.global)
+    const bleSnapshot = this.ble.getSnapshot()
+    const bleWritable = bleSnapshot.state === 'connected' || bleSnapshot.state === 'mock'
 
     // 硬件只需要全局颜色；桌面灵动岛通过快照展示每个 CLI 的独立状态。
     if (!force && command === this.lastSentCommand) {
+      return
+    }
+
+    // 没有硬件连接时不尝试写入，避免重复产生“同步失败”事件。
+    if (!bleWritable) {
+      this.emitSnapshot()
       return
     }
 

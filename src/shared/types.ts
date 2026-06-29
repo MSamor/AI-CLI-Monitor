@@ -9,6 +9,34 @@ export type AgentState = {
   global: GlobalState
 }
 
+export type CodexActivityPhase =
+  | 'idle'
+  | 'session'
+  | 'prompt'
+  | 'tool-start'
+  | 'permission'
+  | 'tool-done'
+  | 'compact'
+  | 'subagent'
+  | 'stopped'
+
+export type CodexActivitySnapshot = {
+  phase: CodexActivityPhase
+  label: string
+  detail: string
+  eventName?: string
+  sessionId?: string
+  turnId?: string
+  toolName?: string
+  toolUseId?: string
+  command?: string
+  permissionMode?: string
+  model?: string
+  cwd?: string
+  lastAssistantMessage?: string
+  updatedAt?: string
+}
+
 export type BleConnectionState =
   | 'idle'
   | 'scanning'
@@ -40,6 +68,7 @@ export type DesktopIslandSnapshot = {
 
 export type MonitorSnapshot = {
   agent: AgentState
+  codexActivity: CodexActivitySnapshot
   ble: BleSnapshot
   island: DesktopIslandSnapshot
   events: MonitorEvent[]
@@ -49,6 +78,16 @@ export type ClaudeHookPayload = {
   hook_event_name?: string
   event?: string
   tool_name?: string
+  tool_use_id?: string
+  tool_input?: unknown
+  tool_response?: unknown
+  turn_id?: string
+  prompt?: string
+  model?: string
+  transcript_path?: string | null
+  permission_mode?: string
+  last_assistant_message?: string | null
+  stop_hook_active?: boolean
   session_id?: string
   cwd?: string
   [key: string]: unknown

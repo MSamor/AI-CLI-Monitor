@@ -232,6 +232,53 @@ button,
   gap: 10px;
 }
 
+.activeCliChip {
+  display: inline-flex;
+  max-width: 190px;
+  min-height: 30px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.28);
+  padding: 0 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px);
+}
+
+.activeCliChip strong {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 10px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activeCliDot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.activeCliChip-red .activeCliDot {
+  background: #fecdd3;
+  box-shadow: 0 0 14px rgba(254, 205, 211, 0.9);
+  animation: activeCliBlink 1s ease-in-out infinite;
+}
+
+.activeCliChip-yellow .activeCliDot {
+  background: #fde68a;
+  box-shadow: 0 0 14px rgba(253, 230, 138, 0.84);
+}
+
+.activeCliChip-green .activeCliDot {
+  background: #bbf7d0;
+  box-shadow: 0 0 12px rgba(187, 247, 208, 0.58);
+}
+
 .statusClusterItem {
   display: grid;
   min-width: 54px;
@@ -354,6 +401,28 @@ button,
   white-space: nowrap;
 }
 
+.agentLogo,
+.islandAgentLogo {
+  display: inline-grid;
+  place-items: center;
+}
+
+.agentLogo {
+  width: 20px;
+  height: 20px;
+  color: #dbeafe;
+}
+
+.agentLogo-running svg,
+.islandAgentLogo-running svg {
+  animation: logoSpin 1.05s linear infinite;
+}
+
+.agentLogo-waiting svg,
+.islandAgentLogo-waiting svg {
+  animation: logoPulse 1.2s ease-in-out infinite;
+}
+
 .statusPill,
 .eventCount {
   margin-left: auto;
@@ -430,6 +499,24 @@ button,
   line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.codexStep {
+  margin-top: 3px !important;
+  color: #bae6fd !important;
+}
+
+.codexCommand,
+.codexMeta {
+  margin-top: 2px !important;
+}
+
+.codexCommand {
+  color: #dbeafe !important;
+}
+
+.codexMeta {
+  color: #7f93ad !important;
 }
 
 .diagnostic {
@@ -749,7 +836,8 @@ button,
 }
 
 .islandAgent,
-.islandMetric {
+.islandMetric,
+.islandCodexStep {
   display: grid;
   min-height: 28px;
   align-items: center;
@@ -766,7 +854,13 @@ button,
   grid-template-columns: 16px minmax(0, 1fr) auto;
 }
 
-.islandMetric {
+.islandAgentLogo {
+  width: 16px;
+  height: 16px;
+}
+
+.islandMetric,
+.islandCodexStep {
   grid-template-columns: 16px minmax(0, 1fr) auto;
 }
 
@@ -774,6 +868,8 @@ button,
 .islandAgent strong,
 .islandMetric span,
 .islandMetric strong,
+.islandCodexStep span,
+.islandCodexStep strong,
 .islandEvent span,
 .islandDiagnostic {
   overflow: hidden;
@@ -784,6 +880,16 @@ button,
 .islandAgent strong,
 .islandMetric strong {
   color: #ffffff;
+  font-size: 10px;
+}
+
+.islandCodexStep {
+  grid-column: 1 / -1;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.islandCodexStep strong {
+  color: #dbeafe;
   font-size: 10px;
 }
 
@@ -967,5 +1073,35 @@ button,
   50% {
     opacity: 1;
     transform: scaleX(1);
+  }
+}
+
+@keyframes logoSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes logoPulse {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes activeCliBlink {
+  0%,
+  100% {
+    opacity: 0.58;
+    transform: scale(0.86);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
   }
 }

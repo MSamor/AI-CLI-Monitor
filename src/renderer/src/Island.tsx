@@ -11,7 +11,6 @@ import {
   Zap
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import type { MouseEvent as ReactMouseEvent } from 'react'
 import type {
   AgentState,
   BleConnectionState,
@@ -36,18 +35,30 @@ const islandSpring = {
   damping: 36,
   mass: 0.8
 } as const
-const EXPAND_LEAVE_GUARD_MS = 750
-const COLLAPSE_DELAY_MS = 120
+const COLLAPSE_DELAY_MS = 3000
 
 export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
-  const expandedAtRef = useRef(0)
+  const expandedRef = useRef(false)
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const activeItems = activeAgentItems(snapshot.agent)
   const visibleItems = activeItems.length > 0 ? activeItems : idleAgentItems()
   const recentEvents = snapshot.events.slice(0, 2)
 
   useEffect(() => clearCollapseTimer, [])
+  useEffect(() => {
+    expandedRef.current = expanded
+  }, [expanded])
+  useEffect(() => {
+    return window.aiMonitor.onDesktopIslandBlurred(() => {
+      if (!expandedRef.current) {
+        return
+      }
+
+      clearCollapseTimer()
+      collapseTimerRef.current = setTimeout(collapse, COLLAPSE_DELAY_MS)
+    })
+  }, [])
 
   const expand = (): void => {
     clearCollapseTimer()
@@ -56,7 +67,7 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
       return
     }
 
-    expandedAtRef.current = Date.now()
+    expandedRef.current = true
     setExpanded(true)
     void window.aiMonitor.setDesktopIslandExpanded(true)
   }
@@ -64,33 +75,13 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
   const collapse = (): void => {
     clearCollapseTimer()
 
-    if (!expanded) {
+    if (!expandedRef.current) {
       return
     }
 
+    expandedRef.current = false
     setExpanded(false)
     void window.aiMonitor.setDesktopIslandExpanded(false)
-  }
-
-  const requestCollapse = (event: ReactMouseEvent<HTMLElement>): void => {
-    if (!expanded) {
-      return
-    }
-
-    // Electron 调整透明窗口尺寸时可能发出一次假的 mouseleave。
-    const elapsed = Date.now() - expandedAtRef.current
-    const pointerStillInside =
-      event.clientX >= 0 &&
-      event.clientX <= window.innerWidth &&
-      event.clientY >= 0 &&
-      event.clientY <= window.innerHeight
-
-    if (elapsed < EXPAND_LEAVE_GUARD_MS || pointerStillInside) {
-      return
-    }
-
-    clearCollapseTimer()
-    collapseTimerRef.current = setTimeout(collapse, COLLAPSE_DELAY_MS)
   }
 
   const clearCollapseTimer = (): void => {
@@ -106,8 +97,7 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
     <motion.main
       layout
       className={`island island-${snapshot.agent.global} ${expanded ? 'island-expanded' : 'island-compact'}`}
-      onMouseEnter={clearCollapseTimer}
-      onMouseLeave={requestCollapse}
+      onPointerDown={clearCollapseTimer}
       initial={{ opacity: 0, scale: 0.88, y: -8 }}
       animate={{
         opacity: 1,
@@ -133,7 +123,7 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
           }}
         />
         <span className="islandTitle">{islandTitle(snapshot.agent)}</span>
-        <span className="islandMeta">生成 {activeItems.length}</span>
+        <span className="islandMeta">{activeCliLabel(snapshot.agent)}</span>
         <span className={`islandBle islandBle-${toneForBleState(snapshot.ble.state)}`}>
           <Bluetooth size={11} />
           {labelForBleState(snapshot.ble.state)}
@@ -152,7 +142,9 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
             <div className="islandAgentRow">
               {visibleItems.map((item) => (
                 <div className={`islandAgent islandAgent-${item.state}`} key={item.name}>
-                  {item.name === 'Claude' ? <Brain size={13} /> : <Sparkles size={13} />}
+                  <span className={`islandAgentLogo islandAgentLogo-${item.state}`} aria-hidden="true">
+                    {item.name === 'Claude' ? <Brain size={13} /> : <Sparkles size={13} />}
+                  </span>
                   <span>{item.name}</span>
                   <strong>{labelForAgentState(item.state)}</strong>
                 </div>
@@ -176,6 +168,19 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
               value={snapshot.ble.lastCommand ?? commandForGlobal(snapshot.agent.global)}
               tone={snapshot.agent.global}
             />
+            <div className="islandCodexStep">
+              <Activity size={12} />
+              <span>{snapshot.codexActivity.label}</span>
+              <strong>{snapshot.codexActivity.toolName ?? snapshot.codexActivity.eventName ?? 'hook'}</strong>
+            </div>
+            {snapshot.codexActivity.command ? (
+              <div className="islandDiagnostic">{snapshot.codexActivity.command}</div>
+            ) : null}
+            {snapshot.codexActivity.turnId || snapshot.codexActivity.model ? (
+              <div className="islandDiagnostic">
+                {compactCodexMeta(snapshot.codexActivity.turnId, snapshot.codexActivity.model)}
+              </div>
+            ) : null}
             <div className="islandEventStack">
               {recentEvents.length === 0 ? (
                 <div className="islandEvent">
@@ -266,6 +271,23 @@ function islandTitle(agent: AgentState): string {
   return 'AI 静默'
 }
 
+function activeCliLabel(agent: AgentState): string {
+  const names = [
+    agent.claude === 'running' ? 'Claude' : undefined,
+    agent.codex === 'running' ? 'Codex' : undefined
+  ].filter(Boolean)
+
+  if (names.length > 0) {
+    return names.join(' / ')
+  }
+
+  if (agent.claude === 'waiting') {
+    return 'Claude 确认'
+  }
+
+  return '低干扰'
+}
+
 function labelForAgentState(state: ClaudeState | CodexState): string {
   if (state === 'running') {
     return '输出'
@@ -339,4 +361,8 @@ function formatEventTime(value: string): string {
     second: '2-digit',
     hour12: false
   }).format(new Date(value))
+}
+
+function compactCodexMeta(turnId?: string, model?: string): string {
+  return [turnId ? `turn ${turnId}` : undefined, model].filter(Boolean).join(' · ')
 }
