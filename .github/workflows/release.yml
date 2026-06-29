@@ -111,3 +111,19 @@ jobs:
             release/*.AppImage
             release/*.deb
           generate_release_notes: true
+          draft: false
+          prerelease: false
+          body: |
+            ## 📦 安装包下载
+
+            - **Windows**: 下载 `.exe` 安装包
+            - **macOS**: 下载 `.dmg` 或 `.zip` 文件
+            - **Linux**: 下载 `.AppImage` 或 `.deb` 包
+
+            ## ✨ 本次更新
+
+            详见下方自动生成的更新日志。
+
+            ---
+
+            > **首次使用？** 请查看 [README](https://github.com/${{ github.repository }}) 了解使用说明
