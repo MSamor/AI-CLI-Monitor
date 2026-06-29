@@ -54,7 +54,6 @@ export function mapClaudeHookToState(payload: ClaudeHookPayload): ClaudeState | 
     case 'generating':
     case 'running':
     case 'busy':
-    case 'sessionstart':
     case 'userpromptsubmit':
     case 'pretooluse':
     case 'posttooluse':
@@ -86,7 +85,6 @@ export function mapCodexActivityToState(payload: ClaudeHookPayload): CodexState 
     case 'generating':
     case 'running':
     case 'busy':
-    case 'sessionstart':
     case 'userpromptsubmit':
     case 'subagentstart':
     case 'pretooluse':

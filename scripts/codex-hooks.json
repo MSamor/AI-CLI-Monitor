@@ -2,57 +2,123 @@
   "hooks": {
     "SessionStart": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ],
     "PermissionRequest": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ],
     "Notification": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ],
     "PreCompact": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ],
     "PostCompact": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ],
     "SubagentStart": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ],
     "SubagentStop": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ],
     "Stop": [
       {
-        "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/ai-cli-monitor/scripts/codex-hook.js"
+          }
+        ]
       }
     ]
   }

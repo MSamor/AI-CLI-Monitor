@@ -24,6 +24,7 @@ type StateManagerOptions = {
   resendMs?: number
   maxEvents?: number
   activityTimeoutMs?: number
+  codexSettledTimeoutMs?: number
 }
 
 export class StateManager extends EventEmitter {
@@ -47,6 +48,7 @@ export class StateManager extends EventEmitter {
   private readonly resendMs: number
   private readonly maxEvents: number
   private readonly activityTimeoutMs: number
+  private readonly codexSettledTimeoutMs: number
 
   constructor(
     private ble: BleTransport,
@@ -57,6 +59,7 @@ export class StateManager extends EventEmitter {
     this.resendMs = options.resendMs ?? 30_000
     this.maxEvents = options.maxEvents ?? 80
     this.activityTimeoutMs = options.activityTimeoutMs ?? 45_000
+    this.codexSettledTimeoutMs = options.codexSettledTimeoutMs ?? 5_000
     this.attachBle()
   }
 
@@ -123,7 +126,7 @@ export class StateManager extends EventEmitter {
         { codex: nextState },
         `Codex 官方 hook：${this.codexActivity.label}。${this.codexActivity.detail}`
       )
-      this.refreshAgentActivityTimeout('codex', nextState)
+      this.refreshAgentActivityTimeout('codex', nextState, this.timeoutForCodexActivity())
       return
     }
 
@@ -230,7 +233,11 @@ export class StateManager extends EventEmitter {
     }, this.debounceMs)
   }
 
-  private refreshAgentActivityTimeout(agent: 'claude' | 'codex', state: ClaudeState | CodexState): void {
+  private refreshAgentActivityTimeout(
+    agent: 'claude' | 'codex',
+    state: ClaudeState | CodexState,
+    timeoutMs = this.activityTimeoutMs
+  ): void {
     this.clearAgentActivityTimeout(agent)
 
     if (state === 'idle') {
@@ -240,8 +247,8 @@ export class StateManager extends EventEmitter {
     // 有些 CLI 手动中断生成时不会可靠触发 Stop hook。
     // 这里用 hook 活动超时兜底，避免 UI 和硬件灯长时间停在“生成中”。
     const timer = setTimeout(() => {
-      this.expireAgentActivity(agent)
-    }, this.activityTimeoutMs)
+      this.expireAgentActivity(agent, timeoutMs)
+    }, timeoutMs)
 
     if (agent === 'claude') {
       this.claudeActivityTimer = timer
@@ -268,7 +275,7 @@ export class StateManager extends EventEmitter {
     this.codexActivityTimer = undefined
   }
 
-  private expireAgentActivity(agent: 'claude' | 'codex'): void {
+  private expireAgentActivity(agent: 'claude' | 'codex', timeoutMs = this.activityTimeoutMs): void {
     this.clearAgentActivityTimeout(agent)
 
     if (agent === 'claude') {
@@ -278,7 +285,7 @@ export class StateManager extends EventEmitter {
 
       this.updateAgent(
         { claude: 'idle' },
-        `Claude 超过 ${this.activityTimeoutSeconds()} 秒没有新的 hook 活动，已恢复为未生成。`
+        `Claude 超过 ${this.timeoutSeconds(timeoutMs)} 秒没有新的 hook 活动，已恢复为未生成。`
       )
       return
     }
@@ -290,17 +297,29 @@ export class StateManager extends EventEmitter {
     this.codexActivity = {
       phase: 'idle',
       label: 'Codex 可能已停止',
-      detail: `超过 ${this.activityTimeoutSeconds()} 秒没有收到新的 Codex hook，已自动恢复为未生成。`,
+      detail: `超过 ${this.timeoutSeconds(timeoutMs)} 秒没有收到新的 Codex hook，已自动恢复为未生成。`,
       updatedAt: new Date().toISOString()
     }
     this.updateAgent(
       { codex: 'idle' },
-      `Codex 超过 ${this.activityTimeoutSeconds()} 秒没有新的 hook 活动，已恢复为未生成。`
+      `Codex 超过 ${this.timeoutSeconds(timeoutMs)} 秒没有新的 hook 活动，已恢复为未生成。`
     )
   }
 
-  private activityTimeoutSeconds(): number {
-    return Math.round(this.activityTimeoutMs / 1000)
+  private timeoutSeconds(timeoutMs: number): number {
+    return Math.round(timeoutMs / 1000)
+  }
+
+  private timeoutForCodexActivity(): number {
+    if (
+      this.codexActivity.phase === 'tool-done' ||
+      this.codexActivity.phase === 'compact-done' ||
+      this.codexActivity.phase === 'subagent'
+    ) {
+      return this.codexSettledTimeoutMs
+    }
+
+    return this.activityTimeoutMs
   }
 
   private async flushGlobalState(force = false): Promise<void> {

@@ -43,8 +43,8 @@ npm run build
 1. 启动应用后，主界面会显示 Claude、Codex、蓝牙硬件和事件流。
 2. 点击「开启灵动岛」会打开一个默认位于 mac 状态栏顶部居中的置顶小胶囊。
 3. 灵动岛可以拖拽移动；拖到其他位置后再次展开，会围绕当前位置放大，不会跳回默认位置。
-4. 点击灵动岛会用弹性动画展开详情，展示 Claude、Codex、全局灯控、蓝牙模式、设备名、诊断信息和最近事件；鼠标移出后自动收回。
-5. 多个 CLI 同时生成时，桌面灵动岛会分别展示每个 AI 的输出状态；硬件灯仍只接收全局状态。
+4. 点击灵动岛会用弹性动画展开详情，展示 Claude、Codex、全局灯控、蓝牙模式、设备名、诊断信息和最近事件；灵动岛失焦 3 秒后自动收回。
+5. 多个 CLI 同时生成时，桌面灵动岛会分别展示每个 AI 的输出状态；正在生成的 CLI 图标会旋转，硬件灯仍只接收全局状态。
 6. 没有硬件时可以点击「模拟」切换到模拟蓝牙通道。
 7. 「手动灯控」可以直接发送 `G/Y/R/B` 指令，用来验证 UI 和硬件链路。
 8. 如果连接真实 Pico，蓝牙面板会显示扫描、连接或错误状态；启动后只自动连接一次，后续重试需要手动点击「重连」。
@@ -59,39 +59,187 @@ npm run build
 http://127.0.0.1:17361/hooks/claude
 ```
 
-把 Claude Code 的 hooks 指向 `scripts/claude-hook.js`。示例配置：
+本机当前 Claude 配置使用：
+
+- 配置文件：`~/.claude/settings.json`
+- 钩子脚本：`~/.claude/claude-hook.js`
+- 本地接收地址：`http://127.0.0.1:17361/hooks/claude`
+
+项目内的脚本模板在 `scripts/claude-hook.js`。如果项目脚本更新过，需要同步到本机 Claude 目录：
+
+```bash
+cp scripts/claude-hook.js ~/.claude/claude-hook.js
+```
+
+`~/.claude/settings.json` 里只需要关注 `hooks` 部分，不要把 `env` 里的密钥写进项目文档。当前使用的是新版 Claude hooks 结构：
 
 ```json
 {
   "hooks": {
-    "UserPromptSubmit": "node /你的绝对路径/ai-cli-monitor/scripts/claude-hook.js",
-    "PreToolUse": "node /你的绝对路径/ai-cli-monitor/scripts/claude-hook.js",
-    "PostToolUse": "node /你的绝对路径/ai-cli-monitor/scripts/claude-hook.js",
-    "Notification": "node /你的绝对路径/ai-cli-monitor/scripts/claude-hook.js",
-    "Stop": "node /你的绝对路径/ai-cli-monitor/scripts/claude-hook.js",
-    "SubagentStop": "node /你的绝对路径/ai-cli-monitor/scripts/claude-hook.js",
-    "SessionEnd": "node /你的绝对路径/ai-cli-monitor/scripts/claude-hook.js"
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.claude/claude-hook.js"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.claude/claude-hook.js"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.claude/claude-hook.js"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.claude/claude-hook.js"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.claude/claude-hook.js"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.claude/claude-hook.js"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.claude/claude-hook.js"
+          }
+        ]
+      }
+    ]
   }
 }
 ```
 
-脚本会读取 Claude 传入的 stdin JSON，转发给本地监听服务，并始终以 `0` 退出，避免影响 Claude CLI 本身。
+脚本会读取 Claude 传入的 stdin JSON，必要时补充 `CLAUDE_EVENT` 环境变量里的事件名，转发给本地监听服务，并始终以 `0` 退出，避免影响 Claude CLI 本身。
+
+Claude 状态映射：
+
+- `UserPromptSubmit` / `PreToolUse` / `PostToolUse`：标记为 AI 生成中。
+- `Notification`：标记为等待确认。
+- `Stop` / `SubagentStop` / `SessionEnd` / `StopFailure`：恢复为未生成。
+- 如果手动中断后没有收到结束事件，应用会在 45 秒没有新 hook 活动后自动恢复为未生成。
 
 ## 开启 Codex AI 活动监听
 
 Codex 进程存在不等于 AI 正在输出。应用仍会每秒扫描一次系统进程列表，但这只用来记录「Codex CLI 已打开」，不会点亮红灯。
 
-推荐按官方 Codex hooks 配置，把 Codex 的 lifecycle 事件转发给本工具：
+推荐按官方 Codex hooks 配置，把 Codex 的 lifecycle 事件转发给本工具。
+
+本机当前 Codex 配置使用：
+
+- 配置文件：`~/.codex/hooks.json`
+- 钩子脚本：`~/.codex/codex-hook.js`
+- 本地接收地址：`http://127.0.0.1:17361/hooks/codex`
+
+项目内的脚本模板在 `scripts/codex-hook.js`，事件配置模板在 `scripts/codex-hooks.json`。如果项目脚本更新过，需要同步到本机 Codex 目录：
 
 ```bash
-cp scripts/codex-hooks.json ~/.codex/hooks.json
+cp scripts/codex-hook.js ~/.codex/codex-hook.js
 ```
 
-然后把 `~/.codex/hooks.json` 里的 `/你的绝对路径/ai-cli-monitor/scripts/codex-hook.js` 改成当前项目的绝对路径。
+你本机当前使用的是新版 Codex hooks 结构，核心格式如下：
 
-当前模板监听这些官方事件：
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/maosi/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
 
-- `SessionStart`：Codex 会话开始。
+建议在 `~/.codex/hooks.json` 中覆盖这些事件：
+
+- `SessionStart`：Codex 会话开始，只记录连接状态，不会标记为 AI 正在输出。
 - `UserPromptSubmit`：用户提交新 prompt，本轮开始。
 - `PreToolUse`：即将执行工具，会展示 `tool_name`、`tool_use_id` 和 `tool_input.command`。
 - `PermissionRequest` / `Notification`：等待授权或用户确认。
@@ -101,9 +249,11 @@ cp scripts/codex-hooks.json ~/.codex/hooks.json
 - `SubagentStop`：子任务完成。
 - `Stop`：本轮结束，会回到未生成状态。
 
-如果手动中断输出但 Codex 没有触发 `Stop`，应用会在 45 秒内没有新 hook 活动后自动恢复为未生成，避免状态一直卡在识别中。
+你当前的 `~/.codex/hooks.json` 已经配置了 `SessionStart`、`PreToolUse`、`PermissionRequest`、`PostToolUse`、`PreCompact` 和 `PostCompact`。建议继续补齐 `UserPromptSubmit`、`Notification`、`SubagentStart`、`SubagentStop` 和 `Stop`，这样纯文本生成、子任务和正常结束都会更精确。
 
-hook 脚本会读取 Codex 通过 stdin 传入的 JSON，并转发到：
+手动中断输出时，Codex 不一定触发 `Stop` hook。应用会额外读取 `~/.codex/sessions` 当天和昨天的 JSONL 增量；检测到 `turn_aborted` 后会立即把 Codex 恢复为未生成。如果没有拿到 `turn_aborted`，`PostToolUse`、`PostCompact`、`SubagentStop` 这类完成事件会在 5 秒后自动回收，其他活动事件保留 45 秒兜底，避免状态一直卡在识别中。
+
+hook 脚本会读取 Codex 通过 stdin 传入的 JSON，必要时补充 `CODEX_HOOK_EVENT_NAME`、`CODEX_HOOK_EVENT`、`CODEX_EVENT` 或 `HOOK_EVENT_NAME` 环境变量里的事件名，并转发到：
 
 ```text
 http://127.0.0.1:17361/hooks/codex
@@ -183,4 +333,4 @@ TX Notify:    6e400003-b5a3-f393-e0a9-e50e24dcca9e
 - 没有硬件但想看效果：使用 `AI_MONITOR_BLE=mock npm run dev`，再开启桌面灵动岛。
 - 端口占用：开发服务默认使用 Vite 的 `5173`。退出时请用 `Ctrl-C` 停止 `npm run dev`。
 - 无边框窗口：主窗口是固定尺寸无边框工具窗，可拖拽窗口空白区域移动，右上角按钮可最小化或关闭。
-- 灵动岛位置：默认出现在主屏幕状态栏居中位置，可拖拽到任意屏幕内位置；点击展开，鼠标移开收起。
+- 灵动岛位置：默认出现在主屏幕状态栏居中位置，可拖拽到任意屏幕内位置；点击展开，窗口失焦 3 秒后收起。
