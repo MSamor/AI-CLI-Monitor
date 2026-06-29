@@ -9,10 +9,14 @@ const EXPANDED_WIDTH = 500
 const EXPANDED_HEIGHT = 252
 const TOP_OFFSET = 2
 const EDGE_PADDING = 8
+const SNAP_TO_TOP_DELAY_MS = 420
+const SNAP_LOCK_MS = 220
 
 export class DesktopIslandController {
   private window?: BrowserWindow
   private expanded = false
+  private snapTimer?: NodeJS.Timeout
+  private snapping = false
 
   constructor(private stateManager: StateManager) {}
 
@@ -61,7 +65,11 @@ export class DesktopIslandController {
     this.window.on('blur', () => {
       this.window?.webContents.send(IPC_CHANNELS.desktopIslandBlurred)
     })
+    this.window.on('move', () => {
+      this.scheduleSnapToTop()
+    })
     this.window.on('closed', () => {
+      this.clearSnapTimer()
       this.window = undefined
       this.expanded = false
       this.stateManager.setDesktopIslandEnabled(false, false)
@@ -115,6 +123,39 @@ export class DesktopIslandController {
     this.window.setBounds(this.bounds(), true)
   }
 
+  private scheduleSnapToTop(): void {
+    if (!this.window || this.window.isDestroyed() || this.snapping) {
+      return
+    }
+
+    this.clearSnapTimer()
+    this.snapTimer = setTimeout(() => {
+      this.snapToTop()
+    }, SNAP_TO_TOP_DELAY_MS)
+  }
+
+  private snapToTop(): void {
+    if (!this.window || this.window.isDestroyed()) {
+      return
+    }
+
+    this.snapping = true
+    this.applyBounds()
+
+    setTimeout(() => {
+      this.snapping = false
+    }, SNAP_LOCK_MS)
+  }
+
+  private clearSnapTimer(): void {
+    if (!this.snapTimer) {
+      return
+    }
+
+    clearTimeout(this.snapTimer)
+    this.snapTimer = undefined
+  }
+
   private bounds(): Electron.Rectangle {
     const islandWidth = this.expanded ? EXPANDED_WIDTH : COMPACT_WIDTH
     const islandHeight = this.expanded ? EXPANDED_HEIGHT : COMPACT_HEIGHT
@@ -127,7 +168,8 @@ export class DesktopIslandController {
       ? currentBounds.x + currentBounds.width / 2
       : displayBounds.x + displayBounds.width / 2
     const preferredX = Math.round(centerX - islandWidth / 2)
-    const preferredY = currentBounds?.y ?? displayBounds.y + TOP_OFFSET
+    // 灵动岛只允许改变横向位置；纵向始终吸附到当前屏幕顶部，避免拖进其他应用内容区。
+    const preferredY = displayBounds.y + TOP_OFFSET
     const maxX = displayBounds.x + displayBounds.width - islandWidth - EDGE_PADDING
     const maxY = displayBounds.y + displayBounds.height - islandHeight - EDGE_PADDING
 

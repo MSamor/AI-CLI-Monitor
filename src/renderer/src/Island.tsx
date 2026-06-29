@@ -292,7 +292,7 @@ function islandTitle(agent: AgentState): string {
     return '等待确认'
   }
 
-  return 'AI 静默'
+  return 'AI 空闲'
 }
 
 function activeCliLabel(agent: AgentState): string {
