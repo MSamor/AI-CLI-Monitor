@@ -669,9 +669,9 @@ button,
   display: grid;
   width: 100vw;
   height: 100vh;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 18px minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   overflow: hidden;
   border: 0;
   border-radius: 999px;
@@ -700,7 +700,7 @@ button,
 }
 
 .island-compact {
-  padding: 4px 9px 4px 7px;
+  padding: 4px 7px 4px 6px;
   box-shadow:
     0 16px 38px rgba(0, 0, 0, 0.32),
     inset 0 0 0 1px rgba(255, 255, 255, 0.15),
@@ -735,7 +735,7 @@ button,
 .islandDragHandle {
   position: relative;
   display: grid;
-  width: 18px;
+  width: 15px;
   height: 100%;
   place-items: center;
   color: rgba(255, 255, 255, 0.46);
@@ -748,9 +748,9 @@ button,
   width: 100%;
   min-width: 0;
   min-height: 28px;
-  grid-template-columns: 13px auto auto minmax(0, 1fr) auto;
+  grid-template-columns: 12px auto auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   border-radius: 999px;
   background: transparent;
   padding: 0;
@@ -786,7 +786,7 @@ button,
 
 .islandTitle {
   overflow: hidden;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 850;
   letter-spacing: 0;
   text-overflow: ellipsis;
@@ -806,8 +806,8 @@ button,
 
 .islandCompactCli {
   display: inline-grid;
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
   flex: 0 0 auto;
   place-items: center;
   border-radius: 50%;
@@ -853,9 +853,15 @@ button,
 }
 
 .islandMeta {
-  max-width: 92px;
+  max-width: 68px;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.islandBle {
+  width: 20px;
+  justify-content: center;
+  padding: 0;
 }
 
 .island-expanded .islandMeta,
@@ -867,6 +873,10 @@ button,
 
 .island-expanded .islandMeta {
   max-width: 150px;
+}
+
+.island-expanded .islandBle {
+  width: 28px;
 }
 
 .islandDetails {
@@ -891,11 +901,11 @@ button,
   display: grid;
   min-height: 28px;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.085);
   color: rgba(255, 255, 255, 0.82);
-  padding: 0 7px;
+  padding: 0 6px;
   font-size: 10px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
@@ -911,7 +921,7 @@ button,
 
 .islandMetric,
 .islandCodexStep {
-  grid-template-columns: 16px minmax(0, 1fr) auto;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
 }
 
 .islandAgent span,
@@ -945,8 +955,7 @@ button,
 
 .islandAgent-running,
 .islandMetric-running,
-.islandMetric-red,
-.islandMetric-error {
+.islandMetric-red {
   background: rgba(239, 68, 68, 0.2);
 }
 
@@ -960,8 +969,7 @@ button,
 .islandAgent-idle,
 .islandMetric-idle,
 .islandMetric-green,
-.islandMetric-connected,
-.islandMetric-mock {
+.islandMetric-connected {
   background: rgba(34, 197, 94, 0.16);
 }
 
@@ -973,16 +981,6 @@ button,
 .islandBle-scanning {
   background: rgba(245, 158, 11, 0.16);
   color: #fde68a;
-}
-
-.islandBle-error {
-  background: rgba(239, 68, 68, 0.2);
-  color: #fecdd3;
-}
-
-.islandBle-mock {
-  background: rgba(56, 189, 248, 0.18);
-  color: #bae6fd;
 }
 
 .islandEventStack {

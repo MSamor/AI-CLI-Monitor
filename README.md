@@ -1,96 +1,64 @@
 # AI 命令行监听器
 
-这是一个 Electron 桌面工具，用来监听 Claude CLI 与 Codex CLI 是否正在进行 AI 生成、工具调用或流式输出，并把状态展示在客户端仪表盘、桌面灵动岛和 Pico 2 W 蓝牙指示灯上。
+AI 命令行监听器是一个 Electron 桌面工具，用来判断 Claude CLI 与 Codex CLI 当前是否正在生成、等待确认或空闲，并把状态同步到主窗口、桌面灵动岛和可选的 Pico 2 W 蓝牙 RGB 指示灯。
 
-## 状态规则
+> 当前版本尚未做完整端到端验证。Release 包、hook 配置和 Pico 硬件链路建议按本文步骤逐项验证后再长期使用。
 
-- `红色 / AI 正在输出`：Claude 或 Codex 任意一个正在思考、调用工具、生成或流式输出。
-- `黄色 / 等待确认`：AI 暂停在确认点，正在等待输入、授权或继续指令。
-- `绿色 / 没有生成任务`：Claude 与 Codex 当前都没有 AI 生成输出。
-- 桌面灵动岛会分别展示每个 CLI 的 AI 活动状态；硬件灯只接收全局状态，只要有一个 AI 正在生成就是红色。
+## ✨ 软件作用
 
-## 快速启动
+- 🧠 监听 Claude / Codex 的 hook 事件，区分「生成中」「等待确认」「空闲」。
+- 🏝️ 启动后自动打开桌面灵动岛；灵动岛会记住上次位置，下次启动优先恢复。
+- 🟢 支持 BLE 指示灯：红色代表生成中，黄色代表等待确认，绿色代表空闲。
+- 🖥️ 主窗口关闭后会收进状态栏/托盘，点击托盘图标可再次打开；最小化仍保留在任务栏。
+- 🧪 没有 Pico 或蓝牙硬件时，可以用模拟蓝牙模式验证 UI 与状态流。
 
-安装依赖：
+## 📦 下载软件
 
-```bash
-npm install
-```
+正式包通过 GitHub Release 发布：
 
-启动真实蓝牙监听：
+1. 打开项目的 GitHub Releases 页面。
+2. 按系统下载对应安装包：
+   - Windows：下载 `.exe`
+   - macOS：下载 `.dmg` 或 `.zip`
+   - Linux：下载 `.AppImage` 或 `.deb`
+3. 首次启动后，软件会自动打开主窗口和灵动岛。
 
-```bash
-npm run dev
-```
-
-没有 Pico 或蓝牙硬件时，用模拟蓝牙启动：
-
-```bash
-AI_MONITOR_BLE=mock npm run dev
-```
-
-构建检查：
-
-```bash
-npm run typecheck
-npm run build
-```
-
-本地打包客户端：
-
-```bash
-npm run dist
-```
-
-打包产物会输出到 `release/` 目录。macOS 会生成 `dmg` 和 `zip`，Windows 会生成 `nsis` 安装包和 `zip`，Linux 会生成 `AppImage` 和 `deb`。
-
-发布 GitHub Release：
+如果需要自己发布：
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-推送 `v*` 标签后，`.github/workflows/release.yml` 会在 macOS、Windows、Linux 三个平台自动构建客户端，并把产物上传到对应 GitHub Release。也可以在 GitHub Actions 页面手动触发「构建 Release 客户端」工作流；手动触发时会生成 workflow artifact，但只有 tag 触发会发布到 Release。
+推送 `v*` 标签后，`.github/workflows/release.yml` 会在 macOS、Windows、Linux 三个平台构建客户端并上传到 GitHub Release。也可以在 GitHub Actions 页面手动触发工作流；手动触发只生成 workflow artifact，不发布 Release。
 
-Windows / Linux 的真实蓝牙依赖是可选原生模块；如果 CI 或用户环境无法编译/加载 `@abandonware/noble`，客户端仍会正常启动，并自动回退到模拟蓝牙通道。macOS 包含真实 BLE 支持。
+## 🪝 配置 Hook
 
-当前项目不保留单元测试文件，也没有 `npm test` 脚本。
-
-## 客户端怎么用
-
-1. 启动应用后，主界面会显示 Claude、Codex、蓝牙硬件和事件流。
-2. 点击「开启灵动岛」会打开一个默认位于 mac 状态栏顶部居中的置顶小胶囊。
-3. 灵动岛可以横向拖拽到任意屏幕；松手后会自动吸附到当前屏幕顶部，避免停在其他应用窗口内容区。
-4. 点击灵动岛会用弹性动画展开详情，展示 Claude、Codex、全局灯控、蓝牙模式、设备名、诊断信息和最近事件；灵动岛失焦 3 秒后自动收回。
-5. 多个 CLI 同时生成时，桌面灵动岛会分别展示每个 AI 的输出状态；正在生成的 CLI 图标会旋转，硬件灯仍只接收全局状态。
-6. 没有硬件时可以点击「模拟」切换到模拟蓝牙通道。
-7. 「手动灯控」可以直接发送 `G/Y/R/B` 指令，用来验证 UI 和硬件链路。
-8. 如果连接真实 Pico，蓝牙面板会显示扫描、连接或错误状态；启动后只自动连接一次，后续重试需要手动点击「重连」。
-
-灵动岛的展开和气泡呼吸动画由 `framer-motion` 驱动，主窗口保持固定尺寸和无边框模式，退出开发命令后不会保留后台服务。
-
-## 开启 Claude 监听
-
-应用启动后会在本机监听：
+应用启动后会监听本机端口：
 
 ```text
-http://127.0.0.1:17361/hooks/claude
+Claude: http://127.0.0.1:17361/hooks/claude
+Codex:  http://127.0.0.1:17361/hooks/codex
 ```
 
-本机当前 Claude 配置使用：
+hook 脚本会读取 CLI 传入的 stdin JSON，转发到本地监听服务，并始终以 `0` 退出，避免影响 Claude / Codex 本身。
 
-- 配置文件：`~/.claude/settings.json`
-- 钩子脚本：`~/.claude/claude-hook.js`
-- 本地接收地址：`http://127.0.0.1:17361/hooks/claude`
+### Claude Hook
 
-项目内的脚本模板在 `scripts/claude-hook.js`。如果项目脚本更新过，需要同步到本机 Claude 目录：
+项目内脚本模板：
+
+```text
+scripts/claude-hook.js
+```
+
+推荐复制到 Claude 配置目录：
 
 ```bash
+mkdir -p ~/.claude
 cp scripts/claude-hook.js ~/.claude/claude-hook.js
 ```
 
-`~/.claude/settings.json` 里只需要关注 `hooks` 部分，不要把 `env` 里的密钥写进项目文档。当前使用的是新版 Claude hooks 结构：
+在 `~/.claude/settings.json` 中配置 hooks。注意把下面命令里的路径替换为你本机的绝对路径：
 
 ```json
 {
@@ -101,7 +69,7 @@ cp scripts/claude-hook.js ~/.claude/claude-hook.js
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.claude/claude-hook.js"
+            "command": "node /你的绝对路径/.claude/claude-hook.js"
           }
         ]
       }
@@ -112,7 +80,7 @@ cp scripts/claude-hook.js ~/.claude/claude-hook.js
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.claude/claude-hook.js"
+            "command": "node /你的绝对路径/.claude/claude-hook.js"
           }
         ]
       }
@@ -123,7 +91,7 @@ cp scripts/claude-hook.js ~/.claude/claude-hook.js
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.claude/claude-hook.js"
+            "command": "node /你的绝对路径/.claude/claude-hook.js"
           }
         ]
       }
@@ -134,7 +102,7 @@ cp scripts/claude-hook.js ~/.claude/claude-hook.js
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.claude/claude-hook.js"
+            "command": "node /你的绝对路径/.claude/claude-hook.js"
           }
         ]
       }
@@ -145,7 +113,7 @@ cp scripts/claude-hook.js ~/.claude/claude-hook.js
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.claude/claude-hook.js"
+            "command": "node /你的绝对路径/.claude/claude-hook.js"
           }
         ]
       }
@@ -156,7 +124,7 @@ cp scripts/claude-hook.js ~/.claude/claude-hook.js
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.claude/claude-hook.js"
+            "command": "node /你的绝对路径/.claude/claude-hook.js"
           }
         ]
       }
@@ -167,7 +135,7 @@ cp scripts/claude-hook.js ~/.claude/claude-hook.js
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.claude/claude-hook.js"
+            "command": "node /你的绝对路径/.claude/claude-hook.js"
           }
         ]
       }
@@ -176,45 +144,52 @@ cp scripts/claude-hook.js ~/.claude/claude-hook.js
 }
 ```
 
-脚本会读取 Claude 传入的 stdin JSON，必要时补充 `CLAUDE_EVENT` 环境变量里的事件名，转发给本地监听服务，并始终以 `0` 退出，避免影响 Claude CLI 本身。
-
 Claude 状态映射：
 
-- `UserPromptSubmit` / `PreToolUse` / `PostToolUse`：标记为 AI 生成中。
+- `UserPromptSubmit` / `PreToolUse` / `PostToolUse`：标记为生成中。
 - `Notification`：标记为等待确认。
-- `Stop` / `SubagentStop` / `SessionEnd` / `StopFailure`：恢复为未生成。
-- 如果手动中断后没有收到结束事件，应用会在 45 秒没有新 hook 活动后自动恢复为未生成。
+- `Stop` / `SubagentStop` / `SessionEnd` / `StopFailure`：恢复为空闲。
+- 如果手动中断后没有收到结束事件，应用会在 5 分钟没有新 hook 活动后自动恢复为空闲。
 
-## 开启 Codex AI 活动监听
+### Codex Hook
 
-Codex 进程存在不等于 AI 正在输出。应用仍会每秒扫描一次系统进程列表，但这只用来记录「Codex CLI 已打开」，不会点亮红灯。
+项目内脚本模板：
 
-推荐按官方 Codex hooks 配置，把 Codex 的 lifecycle 事件转发给本工具。
+```text
+scripts/codex-hook.js
+scripts/codex-hooks.json
+```
 
-本机当前 Codex 配置使用：
-
-- 配置文件：`~/.codex/hooks.json`
-- 钩子脚本：`~/.codex/codex-hook.js`
-- 本地接收地址：`http://127.0.0.1:17361/hooks/codex`
-
-项目内的脚本模板在 `scripts/codex-hook.js`，事件配置模板在 `scripts/codex-hooks.json`。如果项目脚本更新过，需要同步到本机 Codex 目录：
+推荐复制到 Codex 配置目录：
 
 ```bash
+mkdir -p ~/.codex
 cp scripts/codex-hook.js ~/.codex/codex-hook.js
 ```
 
-你本机当前使用的是新版 Codex hooks 结构，核心格式如下：
+在 `~/.codex/hooks.json` 中配置事件。可以参考 `scripts/codex-hooks.json`，并把命令路径替换为你本机的绝对路径：
 
 ```json
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.codex/codex-hook.js"
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
           }
         ]
       }
@@ -225,7 +200,18 @@ cp scripts/codex-hook.js ~/.codex/codex-hook.js
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.codex/codex-hook.js"
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
           }
         ]
       }
@@ -236,7 +222,62 @@ cp scripts/codex-hook.js ~/.codex/codex-hook.js
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.codex/codex-hook.js"
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
           }
         ]
       }
@@ -247,7 +288,7 @@ cp scripts/codex-hook.js ~/.codex/codex-hook.js
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/maosi/.codex/codex-hook.js"
+            "command": "node /你的绝对路径/.codex/codex-hook.js"
           }
         ]
       }
@@ -256,29 +297,20 @@ cp scripts/codex-hook.js ~/.codex/codex-hook.js
 }
 ```
 
-建议在 `~/.codex/hooks.json` 中覆盖这些事件：
+Codex 事件说明：
 
-- `SessionStart`：Codex 会话开始，只记录连接状态，不会标记为 AI 正在输出。
+- `SessionStart`：会话开始，只记录连接状态，不标记为生成中。
 - `UserPromptSubmit`：用户提交新 prompt，本轮开始。
-- `PreToolUse`：即将执行工具，会展示 `tool_name`、`tool_use_id` 和 `tool_input.command`。
+- `PreToolUse`：即将执行工具，会展示工具名、工具 ID 和命令。
 - `PermissionRequest` / `Notification`：等待授权或用户确认。
-- `PostToolUse`：工具执行完成，会保留工具名和本次响应摘要。
+- `PostToolUse`：工具执行完成，会保留工具名和响应摘要。
 - `PreCompact` / `PostCompact`：上下文压缩开始或完成。
-- `SubagentStart`：子任务启动。
-- `SubagentStop`：子任务完成。
-- `Stop`：本轮结束，会回到未生成状态。
+- `SubagentStart` / `SubagentStop`：子任务启动或完成。
+- `Stop`：本轮结束，恢复为空闲。
 
-你当前的 `~/.codex/hooks.json` 已经配置了 `SessionStart`、`PreToolUse`、`PermissionRequest`、`PostToolUse`、`PreCompact` 和 `PostCompact`。建议继续补齐 `UserPromptSubmit`、`Notification`、`SubagentStart`、`SubagentStop` 和 `Stop`，这样纯文本生成、子任务和正常结束都会更精确。
+Codex 进程存在不等于 AI 正在生成。应用仍会每秒扫描一次系统进程列表，但这只用于记录「Codex CLI 已打开」，不会点亮红灯。
 
-手动中断输出时，Codex 不一定触发 `Stop` hook。应用会额外读取 `~/.codex/sessions` 当天和昨天的 JSONL 增量；检测到 `turn_aborted` 后会立即把 Codex 恢复为未生成。如果没有拿到 `turn_aborted`，`PostToolUse`、`PostCompact`、`SubagentStop` 这类完成事件会在 5 秒后自动回收，其他活动事件保留 45 秒兜底，避免状态一直卡在识别中。
-
-hook 脚本会读取 Codex 通过 stdin 传入的 JSON，必要时补充 `CODEX_HOOK_EVENT_NAME`、`CODEX_HOOK_EVENT`、`CODEX_EVENT` 或 `HOOK_EVENT_NAME` 环境变量里的事件名，并转发到：
-
-```text
-http://127.0.0.1:17361/hooks/codex
-```
-
-客户端和灵动岛会展示当前 Codex 阶段、工具名、命令、`turn_id`、`model`、`cwd` 和最近助手消息摘要。
+手动中断输出时，Codex 不一定触发 `Stop` hook。应用会额外读取 `~/.codex/sessions` 当天和昨天的 JSONL 增量；检测到 `turn_aborted` 后会立即把 Codex 恢复为空闲。如果没有拿到 `turn_aborted`，`PostToolUse`、`PostCompact`、`SubagentStop` 这类完成事件会在 5 秒后自动回收，其他活动事件保留 5 分钟兜底，避免长时间生成任务被过早恢复。
 
 如果暂时不配置官方 hooks，也可以继续用 wrapper 做粗粒度兜底：
 
@@ -292,7 +324,56 @@ Windows PowerShell：
 .\scripts\codex-wrapper.ps1
 ```
 
-## 蓝牙协议
+## ⚡ 快速开始
+
+开发运行：
+
+```bash
+npm install
+npm run dev
+```
+
+没有蓝牙硬件时：
+
+```bash
+AI_MONITOR_BLE=mock npm run dev
+```
+
+构建检查：
+
+```bash
+npm run typecheck
+npm run build
+```
+
+本地打包：
+
+```bash
+npm run dist
+```
+
+打包产物会输出到 `release/` 目录。macOS 生成 `dmg` 和 `zip`，Windows 生成 `exe` 安装包和 `zip`，Linux 生成 `AppImage` 和 `deb`。
+
+
+## 📊 状态规则
+
+- 🔴 `红色 / AI 生成中`：Claude 或 Codex 任意一个正在思考、调用工具、生成或流式输出。
+- 🟡 `黄色 / 等待确认`：AI 暂停在确认点，正在等待输入、授权或继续指令。
+- 🟢 `绿色 / 空闲`：Claude 与 Codex 当前没有正在进行的生成活动。
+- 桌面灵动岛会分别展示每个 CLI 的活动状态；硬件灯只接收全局状态，只要有一个 AI 正在生成就是红色。
+
+## 🏝️ 客户端使用
+
+1. 启动应用后，主界面会显示 Claude、Codex、蓝牙硬件和事件流。
+2. 灵动岛启动时默认打开；可以横向拖拽到任意屏幕，松手后会吸附到当前屏幕顶部。
+3. 灵动岛会记住上次位置；如果原来的显示器不存在，会回到主屏幕顶部居中。
+4. 点击灵动岛会展开详情，展示 Claude、Codex、全局灯控、蓝牙状态、设备名、诊断信息和最近事件；失焦 3 秒后自动收回。
+5. 蓝牙状态在灵动岛紧凑态只保留图标：已连接/模拟模式为绿色，其他状态为黄色。
+6. 主窗口点击关闭会隐藏到状态栏/托盘；点击托盘图标可再次打开。点击最小化仍保留在任务栏。
+7. 没有硬件时可以点击「模拟」切换到模拟蓝牙通道。
+8. 「手动灯控」可以直接发送 `G/Y/R/B` 指令，用来验证 UI 和硬件链路。
+
+## 🔵 蓝牙协议
 
 桌面端使用 `@abandonware/noble` 扫描 BLE 外设。这个流程走 BLE GATT，不需要在系统蓝牙面板里手动配对；保持 Pico 通电并广播即可。
 
@@ -305,13 +386,13 @@ Windows PowerShell：
 5. 扫描 8 秒没找到设备会停止本轮扫描，并停在待重试状态。
 6. 断线后不会自动重连；需要在客户端手动点击「重连」再次扫描。
 
-目标设备名为：
+目标设备名：
 
 ```text
 AI_LED
 ```
 
-Pico 端使用 Nordic UART Service 兼容协议：
+Nordic UART Service 兼容协议：
 
 ```text
 Service UUID: 6e400001-b5a3-f393-e0a9-e50e24dcca9e
@@ -322,11 +403,34 @@ TX Notify:    6e400003-b5a3-f393-e0a9-e50e24dcca9e
 桌面端只向 RX 写入一个字节：
 
 - `G`：绿色，空闲
-- `Y`：黄色，等待
-- `R`：红色，AI 正在生成或输出
+- `Y`：黄色，等待确认
+- `R`：红色，AI 生成中
 - `B`：蓝色呼吸灯
 
-## 连接 Pico 2 W 硬件
+## 🧰 开发与发布
+
+当前项目不保留单元测试文件，也没有 `npm test` 脚本。改动后建议至少执行：
+
+```bash
+npm run typecheck
+npm run build
+```
+
+Windows / Linux 的真实蓝牙依赖是可选原生模块。如果 CI 或用户环境无法编译/加载 `@abandonware/noble`，客户端仍会正常启动，并自动回退到模拟蓝牙通道。macOS 包含真实 BLE 支持。
+
+## ❓ 常见问题
+
+- 页面白屏：先运行 `npm run build`，确认 preload 构建成功；当前代码使用 `out/preload/index.mjs`。
+- 找不到硬件：确认 Pico 广播名是 `AI_LED`，并且电脑蓝牙已开启；应用启动只自动扫描一次，后续请点击「重连」。
+- 没有硬件但想看效果：使用 `AI_MONITOR_BLE=mock npm run dev`，再打开主窗口或灵动岛查看状态。
+- 端口占用：开发服务默认使用 Vite 的 `5173`。退出时请用 `Ctrl-C` 停止 `npm run dev`。
+- 无边框窗口：主窗口是固定尺寸无边框工具窗，可拖拽窗口空白区域移动，右上角按钮可最小化或关闭。
+
+## 🍓 Pico 2 W 硬件说明
+
+Pico 硬件链路目前尚未完整验证。建议先用 `AI_MONITOR_BLE=mock npm run dev` 验证软件状态，再接入真实硬件。
+
+连接步骤：
 
 1. 给 Pico 2 W 刷入 MicroPython。
 2. 安装或拷贝 `aioble` 支持库到 Pico 文件系统。
@@ -339,17 +443,8 @@ TX Notify:    6e400003-b5a3-f393-e0a9-e50e24dcca9e
 6. 重启 Pico，确认它广播设备名 `AI_LED`。
 7. 在电脑上运行 `npm run dev`，应用会自动扫描并连接。
 
-## 平台蓝牙配置
+平台蓝牙配置：
 
 - macOS：给终端或 Electron 应用授予蓝牙权限；如果权限弹窗没出现，可以到系统设置里手动开启。
 - Windows：需要 Windows 10+ 和支持 BLE 的蓝牙适配器；如果扫描失败，先用 `AI_MONITOR_BLE=mock npm run dev` 验证 UI。
 - Linux：需要 BlueZ 正常运行，并确保当前用户有蓝牙扫描权限。
-
-## 常见问题
-
-- 页面白屏：先运行 `npm run build`，确认 preload 构建成功；当前代码已使用 `out/preload/index.mjs`。
-- 找不到硬件：确认 Pico 广播名是 `AI_LED`，并且电脑蓝牙已开启；应用启动只自动扫描一次，后续请点击「重连」。
-- 没有硬件但想看效果：使用 `AI_MONITOR_BLE=mock npm run dev`，再开启桌面灵动岛。
-- 端口占用：开发服务默认使用 Vite 的 `5173`。退出时请用 `Ctrl-C` 停止 `npm run dev`。
-- 无边框窗口：主窗口是固定尺寸无边框工具窗，可拖拽窗口空白区域移动，右上角按钮可最小化或关闭。
-- 灵动岛位置：默认出现在主屏幕状态栏居中位置，可横向拖拽到任意屏幕；松手后会自动吸顶，不会停在其他应用内容区；点击展开，窗口失焦 3 秒后收起。

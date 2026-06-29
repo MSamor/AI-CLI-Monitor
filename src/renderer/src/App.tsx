@@ -26,9 +26,9 @@ import { Island } from './Island'
 import { useMonitorStore } from './store'
 
 const commandButtons: Array<{ command: LedCommand; label: string; tone: GlobalState | 'blue' }> = [
-  { command: 'G', label: '静默', tone: 'green' },
+  { command: 'G', label: '空闲', tone: 'green' },
   { command: 'Y', label: '待确认', tone: 'yellow' },
-  { command: 'R', label: '输出中', tone: 'red' },
+  { command: 'R', label: '生成中', tone: 'red' },
   { command: 'B', label: '呼吸', tone: 'blue' }
 ]
 
@@ -291,14 +291,14 @@ function activeCliLabel(claude: ClaudeState, codex: CodexState): string {
 
 function labelForGlobal(state: GlobalState): string {
   if (state === 'red') {
-    return 'AI 正在输出'
+    return 'AI 生成中'
   }
 
   if (state === 'yellow') {
     return '等待你的确认'
   }
 
-  return '没有生成任务'
+  return '空闲'
 }
 
 function globalDescription(state: GlobalState): string {
@@ -310,19 +310,19 @@ function globalDescription(state: GlobalState): string {
     return 'AI 已暂停在确认点，可能需要授权、输入或继续指令。'
   }
 
-  return 'Claude 与 Codex 当前没有生成输出，桌面灵动岛保持低干扰。'
+  return 'Claude 与 Codex 当前处于空闲状态，桌面灵动岛保持常驻待命。'
 }
 
 function labelForAgentState(state: ClaudeState | CodexState): string {
   if (state === 'running') {
-    return '生成输出中'
+    return '生成中'
   }
 
   if (state === 'waiting') {
     return '等待确认'
   }
 
-  return '未生成'
+  return '空闲'
 }
 
 function agentDetail(agentName: 'Claude' | 'Codex', state: ClaudeState | CodexState): string {
@@ -338,7 +338,7 @@ function agentDetail(agentName: 'Claude' | 'Codex', state: ClaudeState | CodexSt
     return '进程在线不代表生成中；wrapper/hook 上报后才点亮。'
   }
 
-  return '未检测到新的 AI 生成或输出事件。'
+  return '当前处于空闲状态。'
 }
 
 function labelForBleState(state: BleConnectionState): string {

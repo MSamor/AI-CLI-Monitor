@@ -16,7 +16,7 @@ export const DEFAULT_AGENT_STATE: AgentState = {
 
 export const DEFAULT_CODEX_ACTIVITY: CodexActivitySnapshot = {
   phase: 'idle',
-  label: 'Codex 静默',
+  label: 'Codex 空闲',
   detail: '尚未收到 Codex 官方 hook 事件。'
 }
 
@@ -204,7 +204,7 @@ function labelForCodexPhase(phase: CodexActivityPhase, toolName?: string): strin
     case 'stopped':
       return 'Codex 本轮结束'
     case 'idle':
-      return 'Codex 静默'
+      return 'Codex 空闲'
     default:
       return 'Codex 活动'
   }

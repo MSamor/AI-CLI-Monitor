@@ -26,8 +26,6 @@ type IslandMetricTone =
   | GlobalState
   | 'connected'
   | 'scanning'
-  | 'error'
-  | 'mock'
 
 const islandSpring = {
   type: 'spring',
@@ -135,9 +133,12 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
           ))}
         </span>
         <span className="islandMeta">{activeCliLabel(snapshot.agent)}</span>
-        <span className={`islandBle islandBle-${toneForBleState(snapshot.ble.state)}`}>
-          <Bluetooth size={11} />
-          {labelForBleState(snapshot.ble.state)}
+        <span
+          className={`islandBle islandBle-${toneForBleState(snapshot.ble.state)}`}
+          title={`蓝牙：${labelForBleState(snapshot.ble.state)}`}
+          aria-label={`蓝牙：${labelForBleState(snapshot.ble.state)}`}
+        >
+          <Bluetooth size={12} />
         </span>
       </button>
 
@@ -285,14 +286,14 @@ function compactAgentItems(agent: AgentState): Array<{
 
 function islandTitle(agent: AgentState): string {
   if (agent.global === 'red') {
-    return 'AI 输出中'
+    return 'AI 生成中'
   }
 
   if (agent.global === 'yellow') {
     return '等待确认'
   }
 
-  return 'AI 空闲'
+  return '空闲'
 }
 
 function activeCliLabel(agent: AgentState): string {
@@ -309,19 +310,19 @@ function activeCliLabel(agent: AgentState): string {
     return 'Claude 确认'
   }
 
-  return '低干扰'
+  return '空闲'
 }
 
 function labelForAgentState(state: ClaudeState | CodexState): string {
   if (state === 'running') {
-    return '输出'
+    return '生成'
   }
 
   if (state === 'waiting') {
     return '确认'
   }
 
-  return '静默'
+  return '空闲'
 }
 
 function labelForBleState(state: BleConnectionState): string {
@@ -340,8 +341,8 @@ function labelForBleState(state: BleConnectionState): string {
 
 function labelForGlobalState(state: GlobalState): string {
   const labels: Record<GlobalState, string> = {
-    green: '没有生成',
-    red: '正在输出',
+    green: '空闲',
+    red: '生成中',
     yellow: '等待确认'
   }
 
@@ -350,17 +351,9 @@ function labelForGlobalState(state: GlobalState): string {
 
 function toneForBleState(
   state: BleConnectionState
-): 'connected' | 'scanning' | 'error' | 'mock' {
-  if (state === 'connected') {
+): 'connected' | 'scanning' {
+  if (state === 'connected' || state === 'mock') {
     return 'connected'
-  }
-
-  if (state === 'mock') {
-    return 'mock'
-  }
-
-  if (state === 'error') {
-    return 'error'
   }
 
   return 'scanning'

@@ -4,9 +4,9 @@ import { IPC_CHANNELS } from '../../shared/ipc'
 import type { PreferencesStore } from '../preferences'
 import type { StateManager } from '../state/stateManager'
 
-const COMPACT_WIDTH = 352
+const COMPACT_WIDTH = 286
 const COMPACT_HEIGHT = 38
-const EXPANDED_WIDTH = 500
+const EXPANDED_WIDTH = 430
 const EXPANDED_HEIGHT = 252
 const TOP_OFFSET = 2
 const EDGE_PADDING = 8

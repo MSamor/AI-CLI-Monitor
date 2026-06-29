@@ -58,7 +58,7 @@ export class StateManager extends EventEmitter {
     this.debounceMs = options.debounceMs ?? 500
     this.resendMs = options.resendMs ?? 30_000
     this.maxEvents = options.maxEvents ?? 80
-    this.activityTimeoutMs = options.activityTimeoutMs ?? 45_000
+    this.activityTimeoutMs = options.activityTimeoutMs ?? 5 * 60_000
     this.codexSettledTimeoutMs = options.codexSettledTimeoutMs ?? 5_000
     this.attachBle()
   }
@@ -285,7 +285,7 @@ export class StateManager extends EventEmitter {
 
       this.updateAgent(
         { claude: 'idle' },
-        `Claude 超过 ${this.timeoutSeconds(timeoutMs)} 秒没有新的 hook 活动，已恢复为未生成。`
+        `Claude 超过 ${this.timeoutSeconds(timeoutMs)} 秒没有新的 hook 活动，已恢复为空闲。`
       )
       return
     }
@@ -297,12 +297,12 @@ export class StateManager extends EventEmitter {
     this.codexActivity = {
       phase: 'idle',
       label: 'Codex 可能已停止',
-      detail: `超过 ${this.timeoutSeconds(timeoutMs)} 秒没有收到新的 Codex hook，已自动恢复为未生成。`,
+      detail: `超过 ${this.timeoutSeconds(timeoutMs)} 秒没有收到新的 Codex hook，已自动恢复为空闲。`,
       updatedAt: new Date().toISOString()
     }
     this.updateAgent(
       { codex: 'idle' },
-      `Codex 超过 ${this.timeoutSeconds(timeoutMs)} 秒没有新的 hook 活动，已恢复为未生成。`
+      `Codex 超过 ${this.timeoutSeconds(timeoutMs)} 秒没有新的 hook 活动，已恢复为空闲。`
     )
   }
 
@@ -382,5 +382,5 @@ function labelForAgentState(state: ClaudeState | CodexState): string {
     return '等待确认'
   }
 
-  return '未生成'
+  return '空闲'
 }
