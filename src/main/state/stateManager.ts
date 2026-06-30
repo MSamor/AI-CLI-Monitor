@@ -4,7 +4,8 @@ import {
   computeGlobalState,
   createCodexActivitySnapshot,
   DEFAULT_AGENT_STATE,
-  DEFAULT_CODEX_ACTIVITY
+  DEFAULT_CODEX_ACTIVITY,
+  DEFAULT_UPDATE_SNAPSHOT
 } from '../../shared/state'
 import type {
   AgentState,
@@ -15,7 +16,8 @@ import type {
   LedCommand,
   MonitorEvent,
   MonitorSnapshot,
-  ToolIntegrationsSnapshot
+  ToolIntegrationsSnapshot,
+  UpdateSnapshot
 } from '../../shared/types'
 import type { BleTransport } from '../ble/bleTransport'
 import { errorMessage } from '../ble/bleTransport'
@@ -35,6 +37,7 @@ export class StateManager extends EventEmitter {
     visible: false
   }
   private integrations: ToolIntegrationsSnapshot = createInitialToolIntegrations()
+  private update: UpdateSnapshot = { ...DEFAULT_UPDATE_SNAPSHOT }
   private events: MonitorEvent[] = []
   private debounceTimer?: NodeJS.Timeout
   private resendTimer?: NodeJS.Timeout
@@ -174,6 +177,28 @@ export class StateManager extends EventEmitter {
     this.emitSnapshot()
   }
 
+  setUpdateStatus(
+    next: Partial<UpdateSnapshot>,
+    event?: { level: MonitorEvent['level']; message: string }
+  ): void {
+    const updatedAt = new Date().toISOString()
+
+    this.update =
+      next.phase === 'idle'
+        ? { ...DEFAULT_UPDATE_SNAPSHOT, ...next, updatedAt }
+        : {
+            ...this.update,
+            ...next,
+            updatedAt
+          }
+
+    if (event) {
+      this.addEvent(event.level, event.message)
+    }
+
+    this.emitSnapshot()
+  }
+
   async setManualLed(command: LedCommand): Promise<void> {
     await this.ble.send(command)
     this.lastSentCommand = command
@@ -188,6 +213,7 @@ export class StateManager extends EventEmitter {
       ble: this.ble.getSnapshot(),
       island: { ...this.island },
       integrations: cloneToolIntegrations(this.integrations),
+      update: { ...this.update },
       events: [...this.events]
     }
   }

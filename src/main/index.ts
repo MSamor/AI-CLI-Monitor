@@ -103,7 +103,7 @@ function createWindow(): BrowserWindow {
   return mainWindow
 }
 
-function showMainWindow(): void {
+function showMainWindow(): BrowserWindow {
   const window = createWindow()
 
   if (window.isMinimized()) {
@@ -112,6 +112,8 @@ function showMainWindow(): void {
 
   window.show()
   window.focus()
+
+  return window
 }
 
 function createTray(): void {
@@ -187,10 +189,12 @@ async function bootstrap(): Promise<void> {
 
   updateManager = new UpdateManager(
     () => mainWindow,
+    showMainWindow,
     () => {
       isQuitting = true
       app.quit()
-    }
+    },
+    (next, event) => stateManager?.setUpdateStatus(next, event)
   )
   void updateManager.checkOnStartup()
 }

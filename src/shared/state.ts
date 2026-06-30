@@ -5,7 +5,8 @@ import type {
   CodexActivityPhase,
   CodexActivitySnapshot,
   CodexState,
-  GlobalState
+  GlobalState,
+  UpdateSnapshot
 } from './types'
 
 export const DEFAULT_AGENT_STATE: AgentState = {
@@ -17,7 +18,11 @@ export const DEFAULT_AGENT_STATE: AgentState = {
 export const DEFAULT_CODEX_ACTIVITY: CodexActivitySnapshot = {
   phase: 'idle',
   label: 'Codex 空闲',
-  detail: '尚未收到 Codex 官方 hook 事件。'
+  detail: '尚未收到 Codex 事件。'
+}
+
+export const DEFAULT_UPDATE_SNAPSHOT: UpdateSnapshot = {
+  phase: 'idle'
 }
 
 export function computeGlobalState(state: Pick<AgentState, 'claude' | 'codex'>): GlobalState {
@@ -244,7 +249,7 @@ function detailForCodexPayload(
     return cwd
   }
 
-  return '已收到官方 Codex hook 事件。'
+  return '已收到官方 Codex 事件。'
 }
 
 function prefixToolOutput(phase: CodexActivityPhase, detail: string, toolName?: string): string {

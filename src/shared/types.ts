@@ -4,6 +4,7 @@ export type GlobalState = 'green' | 'red' | 'yellow'
 export type LedCommand = 'R' | 'G' | 'Y' | 'B'
 export type MonitoredTool = 'claude' | 'codex'
 export type ToolHookStatus = 'enabled' | 'disabled' | 'partial' | 'error'
+export type UpdatePhase = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
 
 export type AgentState = {
   claude: ClaudeState
@@ -84,12 +85,25 @@ export type ToolIntegrationSnapshot = {
 
 export type ToolIntegrationsSnapshot = Record<MonitoredTool, ToolIntegrationSnapshot>
 
+export type UpdateSnapshot = {
+  phase: UpdatePhase
+  version?: string
+  assetName?: string
+  receivedBytes?: number
+  totalBytes?: number
+  progress?: number
+  filePath?: string
+  message?: string
+  updatedAt?: string
+}
+
 export type MonitorSnapshot = {
   agent: AgentState
   codexActivity: CodexActivitySnapshot
   ble: BleSnapshot
   island: DesktopIslandSnapshot
   integrations: ToolIntegrationsSnapshot
+  update: UpdateSnapshot
   events: MonitorEvent[]
 }
 

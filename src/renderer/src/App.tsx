@@ -1,8 +1,11 @@
 import {
   Activity,
+  AlertTriangle,
   Bluetooth,
   Brain,
+  CheckCircle2,
   Circle,
+  Download,
   Minus,
   MonitorDot,
   Play,
@@ -23,7 +26,8 @@ import type {
   MonitorEvent,
   MonitoredTool,
   ToolHookStatus,
-  ToolIntegrationSnapshot
+  ToolIntegrationSnapshot,
+  UpdateSnapshot
 } from '../../shared/types'
 import { Island } from './Island'
 import { useMonitorStore } from './store'
@@ -195,7 +199,7 @@ export function App(): JSX.Element {
           </p>
         </div>
 
-        <EventLog events={snapshot.events} />
+        <EventLog events={snapshot.events} update={snapshot.update} />
       </section>
     </main>
   )
@@ -337,8 +341,9 @@ function BlePanel({ ble }: { ble: BleSnapshot }): JSX.Element {
   )
 }
 
-function EventLog({ events }: { events: MonitorEvent[] }): JSX.Element {
-  const visibleEvents = events.slice(0, 3)
+function EventLog({ events, update }: { events: MonitorEvent[]; update: UpdateSnapshot }): JSX.Element {
+  const showUpdate = update.phase !== 'idle'
+  const visibleEvents = events.slice(0, showUpdate ? 2 : 3)
 
   return (
     <div className="logPanel">
@@ -347,6 +352,7 @@ function EventLog({ events }: { events: MonitorEvent[] }): JSX.Element {
         <h2>事件流</h2>
         <span className="eventCount">{visibleEvents.length}</span>
       </div>
+      {showUpdate ? <UpdateProgress update={update} /> : null}
       <div className="eventList">
         {visibleEvents.length === 0 ? <div className="empty">暂无事件</div> : null}
         {visibleEvents.map((event) => (
@@ -356,6 +362,37 @@ function EventLog({ events }: { events: MonitorEvent[] }): JSX.Element {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function UpdateProgress({ update }: { update: UpdateSnapshot }): JSX.Element {
+  const progress = clampProgress(update.progress)
+  const hasProgress = progress !== undefined
+  const showProgressBar = update.phase === 'downloading' || update.phase === 'downloaded'
+  const sizeLabel = formatDownloadSize(update.receivedBytes, update.totalBytes)
+  const meta = [update.assetName, sizeLabel].filter(Boolean).join(' · ')
+
+  return (
+    <div className={`updatePanel updatePanel-${update.phase}`}>
+      <div className="updateHeader">
+        <span className="updateIcon">{iconForUpdatePhase(update.phase)}</span>
+        <div className="updateCopy">
+          <strong>{labelForUpdatePhase(update)}</strong>
+          <span title={update.message ?? update.assetName ?? ''}>
+            {update.message ?? update.assetName ?? '正在处理更新。'}
+          </span>
+        </div>
+        {update.phase === 'downloading' && hasProgress ? (
+          <span className="updatePercent">{Math.round(progress * 100)}%</span>
+        ) : null}
+      </div>
+      {showProgressBar ? (
+        <div className={`updateProgressTrack ${hasProgress ? '' : 'updateProgressTrack-unknown'}`}>
+          <span style={hasProgress ? { width: `${Math.round(progress * 100)}%` } : undefined} />
+        </div>
+      ) : null}
+      {meta ? <div className="updateMeta">{meta}</div> : null}
     </div>
   )
 }
@@ -493,4 +530,76 @@ function toneForBleState(state: BleConnectionState): 'idle' | 'running' | 'waiti
   }
 
   return 'waiting'
+}
+
+function labelForUpdatePhase(update: UpdateSnapshot): string {
+  if (update.phase === 'checking') {
+    return '正在检查更新'
+  }
+
+  if (update.phase === 'available') {
+    return update.version ? `发现新版本 ${update.version}` : '发现新版本'
+  }
+
+  if (update.phase === 'downloading') {
+    return update.version ? `下载新版 ${update.version}` : '正在下载新版'
+  }
+
+  if (update.phase === 'downloaded') {
+    return '新版已下载'
+  }
+
+  if (update.phase === 'error') {
+    return '更新失败'
+  }
+
+  return '更新'
+}
+
+function iconForUpdatePhase(phase: UpdateSnapshot['phase']): JSX.Element {
+  if (phase === 'error') {
+    return <AlertTriangle size={15} />
+  }
+
+  if (phase === 'downloaded') {
+    return <CheckCircle2 size={15} />
+  }
+
+  if (phase === 'downloading') {
+    return <Download size={15} />
+  }
+
+  return <RefreshCw size={15} />
+}
+
+function clampProgress(progress?: number): number | undefined {
+  if (progress === undefined || Number.isNaN(progress)) {
+    return undefined
+  }
+
+  return Math.min(Math.max(progress, 0), 1)
+}
+
+function formatDownloadSize(receivedBytes?: number, totalBytes?: number): string | undefined {
+  if (receivedBytes === undefined && totalBytes === undefined) {
+    return undefined
+  }
+
+  if (receivedBytes !== undefined && totalBytes !== undefined) {
+    return `${formatBytes(receivedBytes)} / ${formatBytes(totalBytes)}`
+  }
+
+  return formatBytes(receivedBytes ?? totalBytes ?? 0)
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  }
+
+  if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`
+  }
+
+  return `${bytes} B`
 }
