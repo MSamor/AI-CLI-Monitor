@@ -9,6 +9,7 @@ import { DesktopIslandController } from './island/desktopIsland'
 import { registerIpc } from './ipc'
 import { PreferencesStore } from './preferences'
 import { StateManager } from './state/stateManager'
+import { UpdateManager } from './update/updateManager'
 import { IPC_CHANNELS } from '../shared/ipc'
 
 const preloadPath = join(__dirname, '../preload/index.mjs')
@@ -23,6 +24,7 @@ let toolIntegrationManager: ToolIntegrationManager | undefined
 let claudeHookServer: ClaudeHookServer | undefined
 let codexWatcher: CodexProcessWatcher | undefined
 let desktopIsland: DesktopIslandController | undefined
+let updateManager: UpdateManager | undefined
 let isQuitting = false
 
 function createWindow(): BrowserWindow {
@@ -152,6 +154,15 @@ async function bootstrap(): Promise<void> {
   createTray()
   createWindow()
   desktopIsland.show()
+
+  updateManager = new UpdateManager(
+    () => mainWindow,
+    () => {
+      isQuitting = true
+      app.quit()
+    }
+  )
+  void updateManager.checkOnStartup()
 }
 
 app.whenReady().then(() => {

@@ -7,7 +7,7 @@
     "email": "maosi@users.noreply.github.com"
   },
   "license": "MIT",
-  "homepage": "https://github.com/maosi/AI-CLI-Monitor",
+  "homepage": "https://github.com/MSamor/AI-CLI-Monitor",
   "private": true,
   "type": "module",
   "main": "out/main/index.js",
