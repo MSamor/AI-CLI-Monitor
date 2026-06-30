@@ -19,6 +19,7 @@ export class CodexProcessWatcher {
   private readonly sessionOffsets = new Map<string, number>()
   private readonly pendingSessionLines = new Map<string, string>()
   private readonly runningSessionFiles = new Set<string>()
+  private readonly sessionToolNames = new Map<string, Map<string, string>>()
   private readonly startedAtMs = Date.now()
   private readonly pollMs: number
   private readonly currentPid: number
@@ -47,6 +48,8 @@ export class CodexProcessWatcher {
       clearInterval(this.timer)
       this.timer = undefined
     }
+
+    this.sessionToolNames.clear()
   }
 
   private async poll(): Promise<void> {
@@ -76,12 +79,14 @@ export class CodexProcessWatcher {
       if (this.running && this.cleanPolls >= 2) {
         this.running = false
         this.runningSessionFiles.clear()
+        this.sessionToolNames.clear()
         this.stateManager.setCodexState('idle', '进程已退出')
       }
     } catch {
       if (this.running) {
         this.running = false
         this.runningSessionFiles.clear()
+        this.sessionToolNames.clear()
         this.stateManager.setCodexState('idle', '进程监听异常')
       }
     }
@@ -96,6 +101,7 @@ export class CodexProcessWatcher {
         this.sessionOffsets.delete(file)
         this.pendingSessionLines.delete(file)
         this.runningSessionFiles.delete(file)
+        this.sessionToolNames.delete(file)
       }
     }
 
@@ -129,6 +135,7 @@ export class CodexProcessWatcher {
       this.sessionOffsets.delete(file)
       this.pendingSessionLines.delete(file)
       this.runningSessionFiles.delete(file)
+      this.sessionToolNames.delete(file)
       return
     }
 
@@ -188,7 +195,8 @@ export class CodexProcessWatcher {
         continue
       }
 
-      const activity = sessionActivityForEvent(event)
+      this.rememberSessionToolName(file, event)
+      const activity = sessionActivityForEvent(event, this.sessionToolName(file, event))
 
       if (!activity) {
         continue
@@ -200,12 +208,49 @@ export class CodexProcessWatcher {
         continue
       }
 
+      if (activity.state === 'waiting') {
+        this.runningSessionFiles.delete(file)
+        this.stateManager.setCodexHookActivity(activity.payload, activity.state, 'Codex 会话记录')
+        continue
+      }
+
       this.runningSessionFiles.delete(file)
 
       if (this.runningSessionFiles.size === 0) {
         this.stateManager.setCodexHookActivity(activity.payload, activity.state, 'Codex 会话记录')
       }
     }
+  }
+
+  private rememberSessionToolName(file: string, event: CodexSessionLine): void {
+    const payload = isRecord(event.payload) ? event.payload : {}
+    const callId = sessionCallId(payload)
+    const toolName = sessionToolName(payload)
+
+    if (!callId || !toolName) {
+      return
+    }
+
+    const toolNames = this.sessionToolNames.get(file) ?? new Map<string, string>()
+    toolNames.set(callId, toolName)
+    this.sessionToolNames.set(file, toolNames)
+  }
+
+  private sessionToolName(file: string, event: CodexSessionLine): string | undefined {
+    const payload = isRecord(event.payload) ? event.payload : {}
+    const toolName = sessionToolName(payload)
+
+    if (toolName) {
+      return toolName
+    }
+
+    const callId = sessionCallId(payload)
+
+    if (!callId) {
+      return undefined
+    }
+
+    return this.sessionToolNames.get(file)?.get(callId)
   }
 }
 
@@ -277,7 +322,10 @@ function isFreshEvent(timestamp: string | undefined, startedAtMs: number): boole
   return Number.isFinite(eventAt) && eventAt >= startedAtMs - 5_000
 }
 
-function sessionActivityForEvent(event: CodexSessionLine): CodexSessionActivity | undefined {
+function sessionActivityForEvent(
+  event: CodexSessionLine,
+  rememberedToolName?: string
+): CodexSessionActivity | undefined {
   const payload = isRecord(event.payload) ? event.payload : {}
   const payloadType = toOptionalString(payload.type)?.toLowerCase()
 
@@ -310,7 +358,7 @@ function sessionActivityForEvent(event: CodexSessionLine): CodexSessionActivity 
     }
     case 'function_call':
     case 'custom_tool_call':
-      return createSessionActivity(event, 'PreToolUse', 'running', undefined)
+      return createSessionActivity(event, 'PreToolUse', 'running', undefined, rememberedToolName)
     case 'tool_search_call':
       return createSessionActivity(event, 'PreToolUse', 'running', undefined, 'tool_search')
     case 'web_search_call':
@@ -325,7 +373,13 @@ function sessionActivityForEvent(event: CodexSessionLine): CodexSessionActivity 
       return createSessionActivity(event, 'PermissionRequest', 'waiting', 'Codex 正在等待授权或确认。')
     case 'function_call_output':
     case 'custom_tool_call_output':
-      return createSessionActivity(event, 'PostToolUse', 'running', '工具返回结果已写入 Codex 会话。')
+      return createSessionActivity(
+        event,
+        'PostToolUse',
+        'running',
+        '工具返回结果已写入 Codex 会话。',
+        rememberedToolName
+      )
     case 'tool_search_output':
       return createSessionActivity(
         event,
@@ -382,8 +436,7 @@ function createSessionActivity(
   fallbackToolName?: string
 ): CodexSessionActivity {
   const payload = isRecord(event.payload) ? event.payload : {}
-  const toolName =
-    toOptionalString(payload.name) ?? toOptionalString(payload.tool_name) ?? fallbackToolName
+  const toolName = sessionToolName(payload) ?? fallbackToolName
 
   return {
     state,
@@ -394,13 +447,30 @@ function createSessionActivity(
       session_id: toOptionalString(payload.session_id),
       turn_id: toOptionalString(payload.turn_id),
       tool_name: toolName,
-      tool_use_id: toOptionalString(payload.call_id) ?? toOptionalString(payload.tool_use_id),
+      tool_use_id: sessionCallId(payload),
       tool_input: toolInputForSessionPayload(payload),
       model: toOptionalString(payload.model),
       cwd: toOptionalString(payload.cwd),
       last_assistant_message: detail
     }
   }
+}
+
+function sessionCallId(payload: Record<string, unknown>): string | undefined {
+  return (
+    toOptionalString(payload.call_id) ??
+    toOptionalString(payload.tool_call_id) ??
+    toOptionalString(payload.tool_use_id) ??
+    toOptionalString(payload.id)
+  )
+}
+
+function sessionToolName(payload: Record<string, unknown>): string | undefined {
+  return (
+    toOptionalString(payload.name) ??
+    toOptionalString(payload.tool_name) ??
+    toOptionalString(payload.tool)
+  )
 }
 
 function toolInputForSessionPayload(payload: Record<string, unknown>): unknown {

@@ -120,7 +120,7 @@ export function createCodexActivitySnapshot(payload: ClaudeHookPayload): CodexAc
   const command = extractCommand(payload.tool_input)
   const phase = phaseForCodexEvent(eventName)
   const label = labelForCodexPhase(phase, toolName)
-  const detail = detailForCodexPayload(phase, payload, command)
+  const detail = detailForCodexPayload(phase, payload, command, toolName)
 
   return {
     phase,
@@ -215,20 +215,21 @@ function labelForCodexPhase(phase: CodexActivityPhase, toolName?: string): strin
 function detailForCodexPayload(
   phase: CodexActivityPhase,
   payload: ClaudeHookPayload,
-  command?: string
+  command?: string,
+  toolName?: string
 ): string {
   if (phase === 'permission') {
     return `正在等待授权，模式：${toOptionalString(payload.permission_mode) ?? '未知'}。`
   }
 
   if (command) {
-    return command
+    return prefixToolOutput(phase, command, toolName)
   }
 
   const assistantMessage = toOptionalString(payload.last_assistant_message)
 
   if (assistantMessage) {
-    return assistantMessage
+    return prefixToolOutput(phase, assistantMessage, toolName)
   }
 
   const prompt = toOptionalString(payload.prompt)
@@ -244,6 +245,18 @@ function detailForCodexPayload(
   }
 
   return '已收到官方 Codex hook 事件。'
+}
+
+function prefixToolOutput(phase: CodexActivityPhase, detail: string, toolName?: string): string {
+  if (phase !== 'tool-done' || !toolName) {
+    return detail
+  }
+
+  if (detail.startsWith(`${toolName} 输出：`)) {
+    return detail
+  }
+
+  return `${toolName} 输出：${detail}`
 }
 
 function extractCommand(value: unknown): string | undefined {

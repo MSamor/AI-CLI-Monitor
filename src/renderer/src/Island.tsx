@@ -53,6 +53,9 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
   const compactTitle = islandTitle(snapshot.agent, snapshot.codexActivity)
   const compactSubtitle = islandSubtitle(snapshot.agent, snapshot.codexActivity)
   const codexDetail = codexPrimaryDetail(snapshot.codexActivity)
+  const codexDetailWithSource = codexDetail
+    ? withSourcePrefix('Codex', codexDetail)
+    : undefined
 
   useEffect(() => {
     return () => {
@@ -279,11 +282,11 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
               />
               <div className={`islandCodexStep islandCodexStep-${snapshot.agent.codex}`}>
                 <Activity size={12} />
-                <span>{snapshot.codexActivity.label}</span>
+                <span>{withSourcePrefix('Codex', snapshot.codexActivity.label)}</span>
                 <strong>{snapshot.codexActivity.toolName ?? snapshot.codexActivity.eventName ?? 'hook'}</strong>
               </div>
-              {codexDetail ? (
-                <div className="islandDiagnostic">{codexDetail}</div>
+              {codexDetailWithSource ? (
+                <div className="islandDiagnostic">{codexDetailWithSource}</div>
               ) : null}
               {snapshot.codexActivity.turnId || snapshot.codexActivity.model ? (
                 <div className="islandDiagnostic">
@@ -383,37 +386,94 @@ function compactAgentItems(agent: AgentState): Array<{
 }
 
 function islandTitle(agent: AgentState, activity: CodexActivitySnapshot): string {
-  if (shouldShowCodexActivity(agent, activity)) {
-    return activity.label
+  if (shouldUseCodexActivity(agent, activity)) {
+    return withSourcePrefix('Codex', activity.label)
   }
 
   if (agent.global === 'red') {
-    return 'AI 生成中'
+    return withSourcePrefix(primaryAgentSource(agent), 'AI 生成中')
   }
 
   if (agent.global === 'yellow') {
-    return '等待确认'
+    return withSourcePrefix(primaryAgentSource(agent), '等待确认')
   }
 
-  return activity.label || 'Codex 空闲'
+  return withSourcePrefix('Codex', activity.label || '空闲')
 }
 
 function islandSubtitle(agent: AgentState, activity: CodexActivitySnapshot): string {
   const detail = codexPrimaryDetail(activity)
 
-  if (shouldShowCodexActivity(agent, activity)) {
-    return detail ?? activeCliLabel(agent)
+  if (shouldUseCodexActivity(agent, activity)) {
+    return withSourcePrefix('Codex', detail ?? activeCliLabel(agent))
   }
 
   if (agent.claude !== 'idle') {
-    return activeCliLabel(agent)
+    return withSourcePrefix('Claude', claudeActivityDetail(agent.claude))
   }
 
-  return detail ?? '等待 Codex 活动'
+  return withSourcePrefix('Codex', detail ?? '等待活动')
 }
 
-function shouldShowCodexActivity(agent: AgentState, activity: CodexActivitySnapshot): boolean {
-  return agent.codex !== 'idle' || activity.phase !== 'idle' || Boolean(activity.updatedAt)
+function shouldUseCodexActivity(agent: AgentState, activity: CodexActivitySnapshot): boolean {
+  if (agent.codex !== 'idle') {
+    return true
+  }
+
+  if (agent.claude !== 'idle') {
+    return false
+  }
+
+  return activity.phase !== 'idle' || Boolean(activity.updatedAt)
+}
+
+function primaryAgentSource(agent: AgentState): 'Claude' | 'Codex' {
+  if (agent.claude !== 'idle' && agent.codex === 'idle') {
+    return 'Claude'
+  }
+
+  return 'Codex'
+}
+
+function claudeActivityDetail(state: ClaudeState): string {
+  if (state === 'waiting') {
+    return '等待确认'
+  }
+
+  if (state === 'running') {
+    return '正在生成'
+  }
+
+  return '空闲'
+}
+
+function withSourcePrefix(source: 'Claude' | 'Codex', value: string): string {
+  const text = normalizeSingleLine(value) ?? '活动'
+  const prefix = `${source} · `
+
+  if (text.startsWith(prefix)) {
+    return text
+  }
+
+  return `${prefix}${stripSourcePrefix(source, text)}`
+}
+
+function stripSourcePrefix(source: 'Claude' | 'Codex', value: string): string {
+  if (value === source) {
+    return '活动'
+  }
+
+  const separators = [' · ', '：', ': ', ' ']
+
+  for (const separator of separators) {
+    const prefix = `${source}${separator}`
+
+    if (value.startsWith(prefix)) {
+      return value.slice(prefix.length).trim() || '活动'
+    }
+  }
+
+  return value
 }
 
 function codexPrimaryDetail(activity: CodexActivitySnapshot): string | undefined {
