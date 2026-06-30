@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { AiMonitorApi, DesktopIslandBlurListener, SnapshotListener } from '../shared/api'
 import { IPC_CHANNELS } from '../shared/ipc'
-import type { LedCommand, MonitorSnapshot } from '../shared/types'
+import type { LedCommand, MonitoredTool, MonitorSnapshot } from '../shared/types'
 
 // 渲染进程保持沙箱化，只暴露最小 IPC API，不直接暴露 Node/Electron 能力。
 const api: AiMonitorApi = {
@@ -31,6 +31,9 @@ const api: AiMonitorApi = {
   setManualLed: (command: LedCommand) => ipcRenderer.invoke(IPC_CHANNELS.setManualLed, command),
   reconnectBle: () => ipcRenderer.invoke(IPC_CHANNELS.reconnectBle),
   useMockBle: () => ipcRenderer.invoke(IPC_CHANNELS.useMockBle),
+  refreshToolIntegrations: () => ipcRenderer.invoke(IPC_CHANNELS.refreshToolIntegrations),
+  setToolHookEnabled: (tool: MonitoredTool, enabled: boolean) =>
+    ipcRenderer.invoke(IPC_CHANNELS.setToolHookEnabled, tool, enabled),
   setDesktopIslandEnabled: (enabled: boolean) =>
     ipcRenderer.invoke(IPC_CHANNELS.setDesktopIslandEnabled, enabled),
   setDesktopIslandExpanded: (expanded: boolean) =>

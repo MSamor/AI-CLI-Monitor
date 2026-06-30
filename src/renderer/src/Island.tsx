@@ -33,7 +33,7 @@ const islandSpring = {
   damping: 36,
   mass: 0.8
 } as const
-const COLLAPSE_DELAY_MS = 3000
+const COLLAPSE_DELAY_MS = 1000
 
 export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element {
   const [expanded, setExpanded] = useState(false)

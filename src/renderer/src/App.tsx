@@ -11,7 +11,7 @@ import {
   X,
   Zap
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type {
   BleConnectionState,
   BleSnapshot,
@@ -20,7 +20,10 @@ import type {
   CodexState,
   GlobalState,
   LedCommand,
-  MonitorEvent
+  MonitorEvent,
+  MonitoredTool,
+  ToolHookStatus,
+  ToolIntegrationSnapshot
 } from '../../shared/types'
 import { Island } from './Island'
 import { useMonitorStore } from './store'
@@ -37,6 +40,7 @@ export function App(): JSX.Element {
   const error = useMonitorStore((store) => store.error)
   const load = useMonitorStore((store) => store.load)
   const setSnapshot = useMonitorStore((store) => store.setSnapshot)
+  const [pendingTool, setPendingTool] = useState<MonitoredTool | undefined>()
   const view = new URLSearchParams(window.location.search).get('view')
 
   useEffect(() => {
@@ -72,6 +76,20 @@ export function App(): JSX.Element {
 
   if (view === 'island') {
     return <Island snapshot={snapshot} />
+  }
+
+  const handleHookToggle = async (tool: MonitoredTool, enabled: boolean): Promise<void> => {
+    if (pendingTool) {
+      return
+    }
+
+    setPendingTool(tool)
+
+    try {
+      await window.aiMonitor.setToolHookEnabled(tool, enabled)
+    } finally {
+      setPendingTool(undefined)
+    }
   }
 
   return (
@@ -111,17 +129,25 @@ export function App(): JSX.Element {
 
       <section className="agentGrid">
         <AgentTrack
+          tool="claude"
           icon={<Brain size={20} />}
           label="Claude"
           state={snapshot.agent.claude}
           detail={agentDetail('Claude', snapshot.agent.claude)}
+          integration={snapshot.integrations.claude}
+          hookPending={pendingTool === 'claude'}
+          onHookToggle={handleHookToggle}
         />
         <AgentTrack
+          tool="codex"
           icon={<Sparkles size={20} />}
           label="Codex"
           state={snapshot.agent.codex}
           detail={agentDetail('Codex', snapshot.agent.codex)}
           activity={snapshot.codexActivity}
+          integration={snapshot.integrations.codex}
+          hookPending={pendingTool === 'codex'}
+          onHookToggle={handleHookToggle}
         />
         <BlePanel ble={snapshot.ble} />
       </section>
@@ -176,17 +202,25 @@ export function App(): JSX.Element {
 }
 
 function AgentTrack({
+  tool,
   icon,
   label,
   state,
   detail,
-  activity
+  activity,
+  integration,
+  hookPending,
+  onHookToggle
 }: {
+  tool: MonitoredTool
   icon: JSX.Element
   label: string
   state: ClaudeState | CodexState
   detail: string
   activity?: CodexActivitySnapshot
+  integration: ToolIntegrationSnapshot
+  hookPending: boolean
+  onHookToggle: (tool: MonitoredTool, enabled: boolean) => Promise<void>
 }): JSX.Element {
   return (
     <div className={`panel agentPanel agentPanel-${state}`}>
@@ -203,6 +237,12 @@ function AgentTrack({
         <span />
       </div>
       <p>{detail}</p>
+      <ToolIntegrationRow
+        tool={tool}
+        integration={integration}
+        pending={hookPending}
+        onToggle={onHookToggle}
+      />
       {activity ? (
         <p className="codexStep">
           {activity.label}
@@ -213,6 +253,55 @@ function AgentTrack({
       {activity?.turnId || activity?.model ? (
         <p className="codexMeta">{[activity.turnId, activity.model].filter(Boolean).join(' · ')}</p>
       ) : null}
+    </div>
+  )
+}
+
+function ToolIntegrationRow({
+  tool,
+  integration,
+  pending,
+  onToggle
+}: {
+  tool: MonitoredTool
+  integration: ToolIntegrationSnapshot
+  pending: boolean
+  onToggle: (tool: MonitoredTool, enabled: boolean) => Promise<void>
+}): JSX.Element {
+  const hookEnabled = integration.hookStatus === 'enabled'
+  const nextHookEnabled = !hookEnabled
+  const hookLabel = pending ? '配置中' : labelForHookStatus(integration.hookStatus)
+  const toolLabel = tool === 'claude' ? 'Claude' : 'Codex'
+
+  return (
+    <div className="integrationRow">
+      <div className="integrationMeta">
+        <span
+          className={`integrationBadge integrationBadge-${integration.installed ? 'installed' : 'missing'}`}
+          title={integration.executablePath ?? `未在 PATH 中检测到 ${toolLabel}`}
+        >
+          <Circle size={7} fill="currentColor" />
+          {integration.installed ? '已安装' : '未安装'}
+        </span>
+        <span
+          className={`integrationBadge integrationBadge-${toneForHookStatus(integration.hookStatus)}`}
+          title={integration.diagnostic ?? integration.configPath}
+        >
+          <Zap size={10} />
+          {hookLabel}
+        </span>
+      </div>
+      <button
+        className={`hookSwitch ${hookEnabled ? 'hookSwitch-on' : ''} ${pending ? 'hookSwitch-pending' : ''}`}
+        type="button"
+        role="switch"
+        aria-checked={hookEnabled}
+        disabled={pending}
+        title={`${nextHookEnabled ? '开启' : '关闭'} ${toolLabel} hook`}
+        onClick={() => void onToggle(tool, nextHookEnabled)}
+      >
+        <span />
+      </button>
     </div>
   )
 }
@@ -353,6 +442,33 @@ function labelForBleState(state: BleConnectionState): string {
   }
 
   return labels[state]
+}
+
+function labelForHookStatus(state: ToolHookStatus): string {
+  const labels: Record<ToolHookStatus, string> = {
+    enabled: 'Hook 开',
+    disabled: 'Hook 关',
+    partial: '待补齐',
+    error: '异常'
+  }
+
+  return labels[state]
+}
+
+function toneForHookStatus(state: ToolHookStatus): 'installed' | 'missing' | 'partial' | 'error' {
+  if (state === 'enabled') {
+    return 'installed'
+  }
+
+  if (state === 'partial') {
+    return 'partial'
+  }
+
+  if (state === 'error') {
+    return 'error'
+  }
+
+  return 'missing'
 }
 
 function toneForBleState(state: BleConnectionState): 'idle' | 'running' | 'waiting' | 'error' {

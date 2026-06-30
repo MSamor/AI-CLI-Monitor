@@ -501,6 +501,95 @@ button,
   white-space: nowrap;
 }
 
+.integrationRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  margin-top: 6px;
+}
+
+.integrationMeta {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.integrationBadge {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 20px;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  padding: 0 7px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.integrationBadge-installed {
+  background: rgba(34, 197, 94, 0.16);
+  color: #bbf7d0;
+}
+
+.integrationBadge-missing {
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+}
+
+.integrationBadge-partial {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+}
+
+.integrationBadge-error {
+  background: rgba(248, 113, 113, 0.22);
+  color: #fecdd3;
+}
+
+.hookSwitch {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.22);
+  padding: 2px;
+  transition:
+    background 160ms ease,
+    opacity 160ms ease;
+}
+
+.hookSwitch span {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+  transition: transform 160ms ease;
+}
+
+.hookSwitch-on {
+  background: rgba(34, 197, 94, 0.58);
+}
+
+.hookSwitch-on span {
+  transform: translateX(14px);
+}
+
+.hookSwitch-pending {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .codexStep {
   margin-top: 3px !important;
   color: #bae6fd !important;

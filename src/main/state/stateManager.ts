@@ -14,7 +14,8 @@ import type {
   CodexState,
   LedCommand,
   MonitorEvent,
-  MonitorSnapshot
+  MonitorSnapshot,
+  ToolIntegrationsSnapshot
 } from '../../shared/types'
 import type { BleTransport } from '../ble/bleTransport'
 import { errorMessage } from '../ble/bleTransport'
@@ -34,6 +35,7 @@ export class StateManager extends EventEmitter {
     enabled: false,
     visible: false
   }
+  private integrations: ToolIntegrationsSnapshot = createInitialToolIntegrations()
   private events: MonitorEvent[] = []
   private debounceTimer?: NodeJS.Timeout
   private resendTimer?: NodeJS.Timeout
@@ -161,6 +163,16 @@ export class StateManager extends EventEmitter {
     this.emitSnapshot()
   }
 
+  setToolIntegrations(next: ToolIntegrationsSnapshot, message?: string): void {
+    this.integrations = cloneToolIntegrations(next)
+
+    if (message) {
+      this.addEvent('info', message)
+    }
+
+    this.emitSnapshot()
+  }
+
   async setManualLed(command: LedCommand): Promise<void> {
     await this.ble.send(command)
     this.lastSentCommand = command
@@ -174,6 +186,7 @@ export class StateManager extends EventEmitter {
       codexActivity: { ...this.codexActivity },
       ble: this.ble.getSnapshot(),
       island: { ...this.island },
+      integrations: cloneToolIntegrations(this.integrations),
       events: [...this.events]
     }
   }
@@ -383,4 +396,34 @@ function labelForAgentState(state: ClaudeState | CodexState): string {
   }
 
   return '空闲'
+}
+
+function createInitialToolIntegrations(): ToolIntegrationsSnapshot {
+  const updatedAt = new Date().toISOString()
+
+  return {
+    claude: {
+      installed: false,
+      hookStatus: 'disabled',
+      hookScriptPath: '',
+      configPath: '',
+      diagnostic: '尚未检测 Claude 集成状态。',
+      updatedAt
+    },
+    codex: {
+      installed: false,
+      hookStatus: 'disabled',
+      hookScriptPath: '',
+      configPath: '',
+      diagnostic: '尚未检测 Codex 集成状态。',
+      updatedAt
+    }
+  }
+}
+
+function cloneToolIntegrations(value: ToolIntegrationsSnapshot): ToolIntegrationsSnapshot {
+  return {
+    claude: { ...value.claude },
+    codex: { ...value.codex }
+  }
 }

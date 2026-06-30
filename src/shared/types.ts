@@ -2,6 +2,8 @@ export type ClaudeState = 'idle' | 'running' | 'waiting'
 export type CodexState = 'idle' | 'running'
 export type GlobalState = 'green' | 'red' | 'yellow'
 export type LedCommand = 'R' | 'G' | 'Y' | 'B'
+export type MonitoredTool = 'claude' | 'codex'
+export type ToolHookStatus = 'enabled' | 'disabled' | 'partial' | 'error'
 
 export type AgentState = {
   claude: ClaudeState
@@ -69,11 +71,24 @@ export type DesktopIslandSnapshot = {
   visible: boolean
 }
 
+export type ToolIntegrationSnapshot = {
+  installed: boolean
+  executablePath?: string
+  hookStatus: ToolHookStatus
+  hookScriptPath: string
+  configPath: string
+  diagnostic?: string
+  updatedAt: string
+}
+
+export type ToolIntegrationsSnapshot = Record<MonitoredTool, ToolIntegrationSnapshot>
+
 export type MonitorSnapshot = {
   agent: AgentState
   codexActivity: CodexActivitySnapshot
   ble: BleSnapshot
   island: DesktopIslandSnapshot
+  integrations: ToolIntegrationsSnapshot
   events: MonitorEvent[]
 }
 

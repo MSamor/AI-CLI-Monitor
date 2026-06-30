@@ -34,6 +34,10 @@ Codex:  http://127.0.0.1:17361/hooks/codex
 
 hook 脚本会读取 CLI 传入的 stdin JSON，转发到本地监听服务，并始终以 `0` 退出，避免影响 Claude / Codex 本身。
 
+推荐直接在主窗口的 Claude / Codex 卡片中打开 `Hook` 开关。应用会自动检测 CLI 是否在 PATH 中可用，并把本工具的 hook 合并写入对应配置文件；关闭开关时只移除本工具管理的 hook，不删除其他自定义配置。
+
+下面内容保留为手动配置参考。
+
 ### Claude Hook
 
 项目内脚本模板：

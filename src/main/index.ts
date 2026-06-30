@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { createBleTransport } from './ble/createBleTransport'
 import { CodexProcessWatcher } from './cli/codexProcessWatcher'
 import { ClaudeHookServer } from './hooks/claudeHookServer'
+import { ToolIntegrationManager } from './integrations/toolIntegrationManager'
 import { DesktopIslandController } from './island/desktopIsland'
 import { registerIpc } from './ipc'
 import { PreferencesStore } from './preferences'
@@ -18,6 +19,7 @@ let mainWindow: BrowserWindow | undefined
 let tray: Tray | undefined
 let stateManager: StateManager | undefined
 let preferences: PreferencesStore | undefined
+let toolIntegrationManager: ToolIntegrationManager | undefined
 let claudeHookServer: ClaudeHookServer | undefined
 let codexWatcher: CodexProcessWatcher | undefined
 let desktopIsland: DesktopIslandController | undefined
@@ -127,9 +129,11 @@ function createTrayIcon(): Electron.NativeImage {
 async function bootstrap(): Promise<void> {
   const ble = await createBleTransport(process.env.AI_MONITOR_BLE === 'mock')
   preferences = new PreferencesStore()
+  toolIntegrationManager = new ToolIntegrationManager()
   stateManager = new StateManager(ble)
   desktopIsland = new DesktopIslandController(stateManager, preferences)
-  registerIpc(stateManager, desktopIsland)
+  registerIpc(stateManager, desktopIsland, toolIntegrationManager)
+  stateManager.setToolIntegrations(await toolIntegrationManager.refresh())
 
   stateManager.onSnapshot((snapshot) => {
     for (const window of BrowserWindow.getAllWindows()) {

@@ -1,4 +1,4 @@
-import type { LedCommand, MonitorSnapshot } from './types'
+import type { LedCommand, MonitoredTool, MonitorSnapshot } from './types'
 
 export type SnapshotListener = (snapshot: MonitorSnapshot) => void
 export type DesktopIslandBlurListener = () => void
@@ -10,6 +10,8 @@ export type AiMonitorApi = {
   setManualLed: (command: LedCommand) => Promise<void>
   reconnectBle: () => Promise<void>
   useMockBle: () => Promise<void>
+  refreshToolIntegrations: () => Promise<void>
+  setToolHookEnabled: (tool: MonitoredTool, enabled: boolean) => Promise<void>
   setDesktopIslandEnabled: (enabled: boolean) => Promise<void>
   setDesktopIslandExpanded: (expanded: boolean) => Promise<void>
   minimizeWindow: () => Promise<void>
