@@ -1,12 +1,13 @@
-# AI 命令行监听器
+# AI CLI Monitor
 
-AI 命令行监听器是一个 Electron 桌面工具，用来监听 Claude CLI 与 Codex CLI 的活动状态，并同步到主窗口、桌面灵动岛和可选的 Pico 2 W 蓝牙 RGB 指示灯。
+AI CLI Monitor是一个 Electron 桌面工具，用来监听 Claude CLI 与 Codex CLI 的活动状态，并同步到主窗口、桌面灵动岛和可选的 Pico 2 W 基于蓝牙的 RGB 指示灯控制程序。
 
 ## 软件作用
 
-- 识别 Claude / Codex 当前是生成中、等待确认还是空闲
-- 启动后自动打开桌面灵动岛
+- 识别 Claude / Codex 当前是生成中、等待确认还是空闲，状态在桌面展示
 - 可连接 Pico 2 W BLE 指示灯：红色代表生成中，黄色代表等待确认，绿色代表空闲
+- TODO 接入硬件-树莓派pico 2W 控制三色灯
+- TODO 截图硬件-小屏幕动态展示
 
 ## 下载与更新
 
@@ -26,8 +27,15 @@ https://github.com/MSamor/AI-CLI-Monitor/releases
 
 1. 启动应用。
 2. 在主窗口的 Claude / Codex 卡片里打开 `Hook` 开关。
-3. 应用会自动检测 CLI 是否在 PATH 中可用，并自动写入本工具需要的 hook 配置。
-4. 关闭 `Hook` 开关时，只会移除本工具管理的 hook，不会删除你的其他自定义配置。
+3. 继续使用你的codex和claude，就会显示运行状态
+
+![img.png](img/img.png)
+
+![img_1.png](img/img_1.png)
+
+![img_2.png](img/img_2.png)
+
+![img.png](img/img_3.png)
 
 应用会监听本机端口：
 
