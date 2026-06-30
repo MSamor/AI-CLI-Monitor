@@ -345,6 +345,25 @@ npm run dist
 
 打包产物会输出到 `release/` 目录。macOS 生成 `dmg` 和 `zip`，Windows 生成 `exe` 安装包和 `zip`，Linux 生成 `AppImage` 和 `deb`。
 
+### macOS Release 签名
+
+从 GitHub 下载的 macOS 包会带有 quarantine 标记，系统会严格检查签名。没有 Developer ID 签名和 Apple 公证时，可能会出现“已损坏，无法打开”或“无法验证开发者”。
+
+CI 已做两层处理：
+
+- 未配置 Apple 证书时，会给 `.app` 做 ad-hoc 签名，避免 Electron 原始包在下载后被判定为签名损坏。
+- 配置 Apple Developer ID 证书和公证密钥后，`electron-builder` 会生成正式签名并提交 Apple 公证，这是面向普通用户分发的推荐方式。
+
+GitHub Secrets 推荐配置：
+
+```text
+CSC_LINK                  Developer ID Application 证书的 base64 p12
+CSC_KEY_PASSWORD          p12 密码
+APPLE_API_KEY_P8          App Store Connect API Key 的 .p8 文件内容
+APPLE_API_KEY_ID          API Key ID
+APPLE_API_ISSUER          Issuer ID
+```
+
 
 ## 📊 状态规则
 
@@ -416,6 +435,7 @@ Windows / Linux 的真实蓝牙依赖是可选原生模块。如果 CI 或用户
 - 没有硬件但想看效果：使用 `AI_MONITOR_BLE=mock npm run dev`，再打开主窗口或灵动岛查看状态。
 - 端口占用：开发服务默认使用 Vite 的 `5173`。退出时请用 `Ctrl-C` 停止 `npm run dev`。
 - 无边框窗口：主窗口是固定尺寸无边框工具窗，可拖拽窗口空白区域移动，右上角按钮可最小化或关闭。
+- macOS 提示已损坏：优先使用已签名并公证的 Release 包；自用未公证包可右键选择“打开”，或执行 `xattr -dr com.apple.quarantine "/Applications/AI CLI Monitor.app"` 后再打开。
 
 ## 🍓 Pico 2 W 硬件说明
 
