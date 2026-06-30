@@ -18,6 +18,7 @@ export class CodexProcessWatcher {
   private running = false
   private readonly sessionOffsets = new Map<string, number>()
   private readonly pendingSessionLines = new Map<string, string>()
+  private readonly runningSessionFiles = new Set<string>()
   private readonly startedAtMs = Date.now()
   private readonly pollMs: number
   private readonly currentPid: number
@@ -74,11 +75,13 @@ export class CodexProcessWatcher {
 
       if (this.running && this.cleanPolls >= 2) {
         this.running = false
+        this.runningSessionFiles.clear()
         this.stateManager.setCodexState('idle', '进程已退出')
       }
     } catch {
       if (this.running) {
         this.running = false
+        this.runningSessionFiles.clear()
         this.stateManager.setCodexState('idle', '进程监听异常')
       }
     }
@@ -92,6 +95,7 @@ export class CodexProcessWatcher {
       if (!recentFiles.has(file)) {
         this.sessionOffsets.delete(file)
         this.pendingSessionLines.delete(file)
+        this.runningSessionFiles.delete(file)
       }
     }
 
@@ -115,7 +119,7 @@ export class CodexProcessWatcher {
       }
     }
 
-    return files
+    return files.sort()
   }
 
   private async readNewSessionLines(file: string): Promise<void> {
@@ -124,6 +128,7 @@ export class CodexProcessWatcher {
     if (!stat) {
       this.sessionOffsets.delete(file)
       this.pendingSessionLines.delete(file)
+      this.runningSessionFiles.delete(file)
       return
     }
 
@@ -189,7 +194,17 @@ export class CodexProcessWatcher {
         continue
       }
 
-      this.stateManager.setCodexHookActivity(activity.payload, activity.state, 'Codex 会话记录')
+      if (activity.state === 'running') {
+        this.runningSessionFiles.add(file)
+        this.stateManager.setCodexHookActivity(activity.payload, activity.state, 'Codex 会话记录')
+        continue
+      }
+
+      this.runningSessionFiles.delete(file)
+
+      if (this.runningSessionFiles.size === 0) {
+        this.stateManager.setCodexHookActivity(activity.payload, activity.state, 'Codex 会话记录')
+      }
     }
   }
 }

@@ -33,6 +33,10 @@ const contentTransition = {
 } as const
 const COLLAPSE_DELAY_MS = 1000
 const RESIZE_ANIMATION_MS = 460
+const EXPAND_CONTENT_DELAY_MS = 120
+const EXPANDED_VIEWPORT_WIDTH = 430
+const EXPANDED_VIEWPORT_HEIGHT = 252
+const VIEWPORT_WAIT_TIMEOUT_MS = 220
 
 export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
@@ -41,6 +45,7 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const animationFrameRef = useRef<number | undefined>(undefined)
   const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const expandContentTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const activeItems = activeAgentItems(snapshot.agent)
   const visibleItems = activeItems.length > 0 ? activeItems : idleAgentItems()
   const recentEvents = snapshot.events.slice(0, 2)
@@ -50,6 +55,7 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
       clearCollapseTimer()
       clearAnimationFrame()
       clearResizeTimer()
+      clearExpandContentTimer()
     }
   }, [])
   useEffect(() => {
@@ -69,6 +75,7 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
   const expand = (): void => {
     clearCollapseTimer()
     clearResizeTimer()
+    clearExpandContentTimer()
 
     if (expandedRef.current) {
       return
@@ -82,16 +89,24 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
         return
       }
 
-      scheduleAnimationFrames(() => {
+      waitForViewportSize(EXPANDED_VIEWPORT_WIDTH, EXPANDED_VIEWPORT_HEIGHT, () => {
         setRenderExpandedBounds(true)
-        setExpanded(true)
-      }, 2)
+        clearExpandContentTimer()
+        expandContentTimerRef.current = setTimeout(() => {
+          if (expandedRef.current) {
+            setExpanded(true)
+          }
+
+          expandContentTimerRef.current = undefined
+        }, EXPAND_CONTENT_DELAY_MS)
+      })
     })()
   }
 
   const collapse = (): void => {
     clearCollapseTimer()
     clearAnimationFrame()
+    clearExpandContentTimer()
 
     if (!expandedRef.current) {
       return
@@ -125,23 +140,47 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
     resizeTimerRef.current = undefined
   }
 
-  const scheduleAnimationFrames = (callback: () => void, frames = 1): void => {
+  const clearExpandContentTimer = (): void => {
+    if (!expandContentTimerRef.current) {
+      return
+    }
+
+    clearTimeout(expandContentTimerRef.current)
+    expandContentTimerRef.current = undefined
+  }
+
+  const waitForViewportSize = (
+    minWidth: number,
+    minHeight: number,
+    callback: () => void
+  ): void => {
     clearAnimationFrame()
 
-    const tick = (remainingFrames: number): void => {
+    const startedAt = performance.now()
+    let readyFrames = 0
+
+    const tick = (): void => {
       animationFrameRef.current = requestAnimationFrame(() => {
         animationFrameRef.current = undefined
+        const viewportReady = window.innerWidth >= minWidth && window.innerHeight >= minHeight
+        const timedOut = performance.now() - startedAt >= VIEWPORT_WAIT_TIMEOUT_MS
 
-        if (remainingFrames <= 1) {
+        if (viewportReady) {
+          readyFrames += 1
+        } else {
+          readyFrames = 0
+        }
+
+        if (readyFrames >= 2 || timedOut) {
           callback()
           return
         }
 
-        tick(remainingFrames - 1)
+        tick()
       })
     }
 
-    tick(frames)
+    tick()
   }
 
   const clearAnimationFrame = (): void => {
