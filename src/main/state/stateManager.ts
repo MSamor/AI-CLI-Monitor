@@ -325,7 +325,7 @@ export class StateManager extends EventEmitter {
 
       this.updateAgent(
         { claude: 'idle' },
-        `Claude 超过 ${this.timeoutSeconds(timeoutMs)} 秒没有新的 hook 活动，已恢复为空闲。`
+        `Claude 超过 ${this.timeoutSeconds(timeoutMs)} 秒没有新的活动，已恢复为空闲。`
       )
       return
     }
