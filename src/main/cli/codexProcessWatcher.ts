@@ -317,6 +317,12 @@ function sessionActivityForEvent(event: CodexSessionLine): CodexSessionActivity 
       return createSessionActivity(event, 'PreToolUse', 'running', undefined, 'web_search')
     case 'patch_apply_begin':
       return createSessionActivity(event, 'PreToolUse', 'running', undefined, 'apply_patch')
+    case 'permission_request':
+    case 'approval_request':
+    case 'approval_requested':
+    case 'confirmation_request':
+    case 'user_approval_request':
+      return createSessionActivity(event, 'PermissionRequest', 'waiting', 'Codex 正在等待授权或确认。')
     case 'function_call_output':
     case 'custom_tool_call_output':
       return createSessionActivity(event, 'PostToolUse', 'running', '工具返回结果已写入 Codex 会话。')

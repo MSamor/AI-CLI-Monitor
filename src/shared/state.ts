@@ -22,12 +22,12 @@ export const DEFAULT_CODEX_ACTIVITY: CodexActivitySnapshot = {
 
 export function computeGlobalState(state: Pick<AgentState, 'claude' | 'codex'>): GlobalState {
   // 硬件灯只关心全局忙闲；桌面端保留每个 CLI 的细分状态。
-  if (state.claude === 'running' || state.codex === 'running') {
-    return 'red'
+  if (state.claude === 'waiting' || state.codex === 'waiting') {
+    return 'yellow'
   }
 
-  if (state.claude === 'waiting') {
-    return 'yellow'
+  if (state.claude === 'running' || state.codex === 'running') {
+    return 'red'
   }
 
   return 'green'
@@ -93,9 +93,10 @@ export function mapCodexActivityToState(payload: ClaudeHookPayload): CodexState 
     case 'postcompact':
     case 'subagentstop':
       return 'running'
+    case 'waiting':
     case 'permissionrequest':
     case 'notification':
-      return 'running'
+      return 'waiting'
     case 'idle':
     case 'stop':
     case 'done':
@@ -151,6 +152,7 @@ function phaseForCodexEvent(eventName: string): CodexActivityPhase {
     case 'pretooluse':
       return 'tool-start'
     case 'permissionrequest':
+    case 'waiting':
       return 'permission'
     case 'posttooluse':
       return 'tool-done'

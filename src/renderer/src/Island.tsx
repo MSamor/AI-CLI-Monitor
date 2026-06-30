@@ -15,6 +15,7 @@ import type {
   AgentState,
   BleConnectionState,
   ClaudeState,
+  CodexActivitySnapshot,
   CodexState,
   GlobalState,
   MonitorSnapshot
@@ -49,6 +50,9 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
   const activeItems = activeAgentItems(snapshot.agent)
   const visibleItems = activeItems.length > 0 ? activeItems : idleAgentItems()
   const recentEvents = snapshot.events.slice(0, 2)
+  const compactTitle = islandTitle(snapshot.agent, snapshot.codexActivity)
+  const compactSubtitle = islandSubtitle(snapshot.agent, snapshot.codexActivity)
+  const codexDetail = codexPrimaryDetail(snapshot.codexActivity)
 
   useEffect(() => {
     return () => {
@@ -204,9 +208,17 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
           <Grip size={12} />
         </div>
 
-        <button className="islandTapSurface" type="button" onClick={expand}>
+        <button
+          className="islandTapSurface"
+          type="button"
+          title={`${compactTitle}：${compactSubtitle}`}
+          onClick={expand}
+        >
           <span className="islandPulse" />
-          <span className="islandTitle">{islandTitle(snapshot.agent)}</span>
+          <span className="islandTextStack">
+            <span className="islandTitle">{compactTitle}</span>
+            <span className="islandSubline">{compactSubtitle}</span>
+          </span>
           <span className="islandCliStack" aria-label={`当前活跃 CLI：${activeCliLabel(snapshot.agent)}`}>
             {compactAgentItems(snapshot.agent).map((item) => (
               <span
@@ -218,7 +230,6 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
               </span>
             ))}
           </span>
-          <span className="islandMeta">{activeCliLabel(snapshot.agent)}</span>
           <span
             className={`islandBle islandBle-${toneForBleState(snapshot.ble.state)}`}
             title={`蓝牙：${labelForBleState(snapshot.ble.state)}`}
@@ -266,13 +277,13 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
                 value={snapshot.ble.lastCommand ?? commandForGlobal(snapshot.agent.global)}
                 tone={snapshot.agent.global}
               />
-              <div className="islandCodexStep">
+              <div className={`islandCodexStep islandCodexStep-${snapshot.agent.codex}`}>
                 <Activity size={12} />
                 <span>{snapshot.codexActivity.label}</span>
                 <strong>{snapshot.codexActivity.toolName ?? snapshot.codexActivity.eventName ?? 'hook'}</strong>
               </div>
-              {snapshot.codexActivity.command ? (
-                <div className="islandDiagnostic">{snapshot.codexActivity.command}</div>
+              {codexDetail ? (
+                <div className="islandDiagnostic">{codexDetail}</div>
               ) : null}
               {snapshot.codexActivity.turnId || snapshot.codexActivity.model ? (
                 <div className="islandDiagnostic">
@@ -371,7 +382,11 @@ function compactAgentItems(agent: AgentState): Array<{
   return [{ name: 'Codex', state: 'idle' }]
 }
 
-function islandTitle(agent: AgentState): string {
+function islandTitle(agent: AgentState, activity: CodexActivitySnapshot): string {
+  if (shouldShowCodexActivity(agent, activity)) {
+    return activity.label
+  }
+
   if (agent.global === 'red') {
     return 'AI 生成中'
   }
@@ -380,21 +395,59 @@ function islandTitle(agent: AgentState): string {
     return '等待确认'
   }
 
-  return '空闲'
+  return activity.label || 'Codex 空闲'
+}
+
+function islandSubtitle(agent: AgentState, activity: CodexActivitySnapshot): string {
+  const detail = codexPrimaryDetail(activity)
+
+  if (shouldShowCodexActivity(agent, activity)) {
+    return detail ?? activeCliLabel(agent)
+  }
+
+  if (agent.claude !== 'idle') {
+    return activeCliLabel(agent)
+  }
+
+  return detail ?? '等待 Codex 活动'
+}
+
+function shouldShowCodexActivity(agent: AgentState, activity: CodexActivitySnapshot): boolean {
+  return agent.codex !== 'idle' || activity.phase !== 'idle' || Boolean(activity.updatedAt)
+}
+
+function codexPrimaryDetail(activity: CodexActivitySnapshot): string | undefined {
+  return (
+    normalizeSingleLine(activity.detail) ??
+    normalizeSingleLine(activity.command) ??
+    normalizeSingleLine(activity.lastAssistantMessage) ??
+    normalizeSingleLine(activity.cwd)
+  )
+}
+
+function normalizeSingleLine(value?: string): string | undefined {
+  const normalized = value?.replace(/\s+/g, ' ').trim()
+
+  return normalized || undefined
 }
 
 function activeCliLabel(agent: AgentState): string {
-  const names = [
+  const waitingNames = [
+    agent.claude === 'waiting' ? 'Claude 确认' : undefined,
+    agent.codex === 'waiting' ? 'Codex 授权' : undefined
+  ].filter(Boolean)
+
+  if (waitingNames.length > 0) {
+    return waitingNames.join(' / ')
+  }
+
+  const runningNames = [
     agent.claude === 'running' ? 'Claude' : undefined,
     agent.codex === 'running' ? 'Codex' : undefined
   ].filter(Boolean)
 
-  if (names.length > 0) {
-    return names.join(' / ')
-  }
-
-  if (agent.claude === 'waiting') {
-    return 'Claude 确认'
+  if (runningNames.length > 0) {
+    return runningNames.join(' / ')
   }
 
   return '空闲'

@@ -875,9 +875,9 @@ button,
   width: 100%;
   min-width: 0;
   min-height: 28px;
-  grid-template-columns: 12px auto auto minmax(0, 1fr) auto;
+  grid-template-columns: 12px minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   border-radius: 999px;
   background: transparent;
   padding: 0;
@@ -886,7 +886,7 @@ button,
 }
 
 .island-expanded .islandTapSurface {
-  min-height: 28px;
+  min-height: 30px;
   grid-column: 2;
 }
 
@@ -915,17 +915,39 @@ button,
   box-shadow: 0 0 12px rgba(245, 158, 11, 0.68);
 }
 
-.islandTitle {
+.islandTextStack {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+  line-height: 1.05;
+}
+
+.islandTitle,
+.islandSubline {
   overflow: hidden;
-  font-size: 10px;
-  font-weight: 850;
   letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.islandTitle {
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.islandSubline {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 8px;
+  font-weight: 650;
+}
+
 .island-expanded .islandTitle {
-  font-size: 14px;
+  font-size: 13px;
+}
+
+.island-expanded .islandSubline {
+  font-size: 10px;
 }
 
 .islandCliStack {
@@ -1095,6 +1117,18 @@ button,
 .islandCodexStep strong {
   color: #dbeafe;
   font-size: 10px;
+}
+
+.islandCodexStep-running {
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.islandCodexStep-waiting {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.islandCodexStep-idle {
+  background: rgba(56, 189, 248, 0.12);
 }
 
 .islandAgent-running,

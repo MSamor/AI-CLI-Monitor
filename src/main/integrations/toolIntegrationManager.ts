@@ -1,9 +1,6 @@
-import { execFile } from 'node:child_process'
-import { constants } from 'node:fs'
-import { access, chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { promisify } from 'node:util'
 import type {
   MonitoredTool,
   ToolHookStatus,
@@ -15,7 +12,7 @@ type JsonObject = Record<string, unknown>
 
 type ToolSpec = {
   tool: MonitoredTool
-  commandName: string
+  installPath: string
   configPath: string
   scriptPath: string
   scriptContent: string
@@ -23,8 +20,6 @@ type ToolSpec = {
   matcher: string
   legacyScriptPaths: string[]
 }
-
-const execFileAsync = promisify(execFile)
 
 const CLAUDE_EVENTS = [
   'UserPromptSubmit',
@@ -217,7 +212,7 @@ export class ToolIntegrationManager {
     this.specs = {
       claude: {
         tool: 'claude',
-        commandName: 'claude',
+        installPath: join(home, '.claude'),
         configPath: join(home, '.claude', 'settings.json'),
         scriptPath: join(home, '.claude', 'ai-cli-monitor-claude-hook.js'),
         scriptContent: CLAUDE_HOOK_SCRIPT,
@@ -227,7 +222,7 @@ export class ToolIntegrationManager {
       },
       codex: {
         tool: 'codex',
-        commandName: 'codex',
+        installPath: codexHome,
         configPath: join(codexHome, 'hooks.json'),
         scriptPath: join(codexHome, 'ai-cli-monitor-codex-hook.js'),
         scriptContent: CODEX_HOOK_SCRIPT,
@@ -273,8 +268,8 @@ export class ToolIntegrationManager {
   }
 
   private async inspectTool(spec: ToolSpec): Promise<ToolIntegrationSnapshot> {
-    const [executablePath, hookInspection] = await Promise.all([
-      this.findExecutable(spec.commandName),
+    const [installPath, hookInspection] = await Promise.all([
+      this.findInstallPath(spec),
       this.inspectHookConfig(spec)
     ])
     const actionError = this.lastActionErrors[spec.tool]
@@ -282,8 +277,8 @@ export class ToolIntegrationManager {
     const diagnostic = actionError ?? hookInspection.diagnostic
 
     return {
-      installed: Boolean(executablePath),
-      executablePath,
+      installed: Boolean(installPath),
+      installPath,
       hookStatus,
       hookScriptPath: spec.scriptPath,
       configPath: spec.configPath,
@@ -397,25 +392,10 @@ export class ToolIntegrationManager {
     await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, 'utf8')
   }
 
-  private async findExecutable(commandName: string): Promise<string | undefined> {
+  private async findInstallPath(spec: ToolSpec): Promise<string | undefined> {
     try {
-      if (process.platform === 'win32') {
-        const result = await execFileAsync('where.exe', [commandName], { timeout: 2000 })
-        return firstOutputLine(result.stdout)
-      }
-
-      const shell = process.env.SHELL ?? '/bin/sh'
-      const result = await execFileAsync(shell, ['-lc', `command -v ${commandName}`], {
-        timeout: 2000
-      })
-      const executablePath = firstOutputLine(result.stdout)
-
-      if (!executablePath) {
-        return undefined
-      }
-
-      await access(executablePath, constants.X_OK)
-      return executablePath
+      const stats = await stat(spec.installPath)
+      return stats.isDirectory() ? spec.installPath : undefined
     } catch {
       return undefined
     }
@@ -497,15 +477,6 @@ function quoteCommandPath(value: string): string {
   }
 
   return `"${value.replace(/(["\\$`])/g, '\\$1')}"`
-}
-
-function firstOutputLine(value: string | Buffer): string | undefined {
-  const output = String(value)
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find(Boolean)
-
-  return output || undefined
 }
 
 function normalizePathText(value: string): string {

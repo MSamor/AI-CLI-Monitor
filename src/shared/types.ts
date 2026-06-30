@@ -1,5 +1,5 @@
 export type ClaudeState = 'idle' | 'running' | 'waiting'
-export type CodexState = 'idle' | 'running'
+export type CodexState = 'idle' | 'running' | 'waiting'
 export type GlobalState = 'green' | 'red' | 'yellow'
 export type LedCommand = 'R' | 'G' | 'Y' | 'B'
 export type MonitoredTool = 'claude' | 'codex'
@@ -74,6 +74,7 @@ export type DesktopIslandSnapshot = {
 export type ToolIntegrationSnapshot = {
   installed: boolean
   executablePath?: string
+  installPath?: string
   hookStatus: ToolHookStatus
   hookScriptPath: string
   configPath: string

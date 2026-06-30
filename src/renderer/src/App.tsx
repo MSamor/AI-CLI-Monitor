@@ -119,7 +119,7 @@ export function App(): JSX.Element {
           </div>
           <div className="statusClusterItem">
             <strong>{activeCount(snapshot.agent.claude, snapshot.agent.codex)}</strong>
-            <span>生成源</span>
+            <span>活跃源</span>
           </div>
           <div className="ledPreview">
             <span />
@@ -272,13 +272,16 @@ function ToolIntegrationRow({
   const nextHookEnabled = !hookEnabled
   const hookLabel = pending ? '配置中' : labelForHookStatus(integration.hookStatus)
   const toolLabel = tool === 'claude' ? 'Claude' : 'Codex'
+  const installTitle = integration.installPath
+    ? `检测到 ${toolLabel} 用户目录：${integration.installPath}`
+    : `未检测到 ${toolLabel} 用户目录`
 
   return (
     <div className="integrationRow">
       <div className="integrationMeta">
         <span
           className={`integrationBadge integrationBadge-${integration.installed ? 'installed' : 'missing'}`}
-          title={integration.executablePath ?? `未在 PATH 中检测到 ${toolLabel}`}
+          title={installTitle}
         >
           <Circle size={7} fill="currentColor" />
           {integration.installed ? '已安装' : '未安装'}
@@ -358,21 +361,26 @@ function EventLog({ events }: { events: MonitorEvent[] }): JSX.Element {
 }
 
 function activeCount(claude: ClaudeState, codex: CodexState): number {
-  return [claude, codex].filter((state) => state === 'running').length
+  return [claude, codex].filter((state) => state !== 'idle').length
 }
 
 function activeCliLabel(claude: ClaudeState, codex: CodexState): string {
-  const names = [
+  const waitingNames = [
+    claude === 'waiting' ? 'Claude' : undefined,
+    codex === 'waiting' ? 'Codex' : undefined
+  ].filter(Boolean)
+
+  if (waitingNames.length > 0) {
+    return `${waitingNames.join(' / ')} 等待确认`
+  }
+
+  const runningNames = [
     claude === 'running' ? 'Claude' : undefined,
     codex === 'running' ? 'Codex' : undefined
   ].filter(Boolean)
 
-  if (names.length > 0) {
-    return `${names.join(' / ')} 正在生成`
-  }
-
-  if (claude === 'waiting') {
-    return 'Claude 等待确认'
+  if (runningNames.length > 0) {
+    return `${runningNames.join(' / ')} 正在生成`
   }
 
   return '暂无 AI 生成'
