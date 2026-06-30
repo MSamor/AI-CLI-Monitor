@@ -27,23 +27,31 @@ type IslandMetricTone =
   | 'connected'
   | 'scanning'
 
-const islandSpring = {
-  type: 'spring',
-  stiffness: 460,
-  damping: 36,
-  mass: 0.8
+const contentTransition = {
+  duration: 0.34,
+  ease: 'easeOut'
 } as const
 const COLLAPSE_DELAY_MS = 1000
+const RESIZE_ANIMATION_MS = 380
 
 export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
+  const [renderExpandedBounds, setRenderExpandedBounds] = useState(false)
   const expandedRef = useRef(false)
   const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const animationFrameRef = useRef<number | undefined>(undefined)
+  const resizeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const activeItems = activeAgentItems(snapshot.agent)
   const visibleItems = activeItems.length > 0 ? activeItems : idleAgentItems()
   const recentEvents = snapshot.events.slice(0, 2)
 
-  useEffect(() => clearCollapseTimer, [])
+  useEffect(() => {
+    return () => {
+      clearCollapseTimer()
+      clearAnimationFrame()
+      clearResizeTimer()
+    }
+  }, [])
   useEffect(() => {
     expandedRef.current = expanded
   }, [expanded])
@@ -60,18 +68,23 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
 
   const expand = (): void => {
     clearCollapseTimer()
+    clearResizeTimer()
 
     if (expanded) {
       return
     }
 
     expandedRef.current = true
-    setExpanded(true)
+    setRenderExpandedBounds(true)
     void window.aiMonitor.setDesktopIslandExpanded(true)
+    scheduleAnimationFrame(() => {
+      setExpanded(true)
+    })
   }
 
   const collapse = (): void => {
     clearCollapseTimer()
+    clearAnimationFrame()
 
     if (!expandedRef.current) {
       return
@@ -79,7 +92,12 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
 
     expandedRef.current = false
     setExpanded(false)
-    void window.aiMonitor.setDesktopIslandExpanded(false)
+    clearResizeTimer()
+    resizeTimerRef.current = setTimeout(() => {
+      setRenderExpandedBounds(false)
+      void window.aiMonitor.setDesktopIslandExpanded(false)
+      resizeTimerRef.current = undefined
+    }, RESIZE_ANIMATION_MS)
   }
 
   const clearCollapseTimer = (): void => {
@@ -91,35 +109,46 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
     collapseTimerRef.current = undefined
   }
 
+  const clearResizeTimer = (): void => {
+    if (!resizeTimerRef.current) {
+      return
+    }
+
+    clearTimeout(resizeTimerRef.current)
+    resizeTimerRef.current = undefined
+  }
+
+  const scheduleAnimationFrame = (callback: () => void): void => {
+    clearAnimationFrame()
+
+    animationFrameRef.current = requestAnimationFrame(() => {
+      animationFrameRef.current = undefined
+      callback()
+    })
+  }
+
+  const clearAnimationFrame = (): void => {
+    if (animationFrameRef.current === undefined) {
+      return
+    }
+
+    cancelAnimationFrame(animationFrameRef.current)
+    animationFrameRef.current = undefined
+  }
+
   return (
-    <motion.main
-      layout
-      className={`island island-${snapshot.agent.global} ${expanded ? 'island-expanded' : 'island-compact'}`}
+    <main
+      className={`island island-${snapshot.agent.global} ${
+        renderExpandedBounds ? 'island-expanded' : 'island-compact'
+      } ${expanded ? 'island-open' : 'island-closed'}`}
       onPointerDown={clearCollapseTimer}
-      initial={{ opacity: 0, scale: 0.88, y: -8 }}
-      animate={{
-        opacity: 1,
-        scale: 1,
-        y: 0
-      }}
-      transition={islandSpring}
     >
       <div className="islandDragHandle" title="拖拽移动灵动岛">
         <Grip size={12} />
       </div>
 
       <button className="islandTapSurface" type="button" onClick={expand}>
-        <motion.span
-          className="islandPulse"
-          animate={{
-            scale: snapshot.agent.global === 'red' ? [0.9, 1.22, 0.9] : [0.94, 1.08, 0.94]
-          }}
-          transition={{
-            duration: snapshot.agent.global === 'red' ? 1.1 : 1.9,
-            repeat: Infinity,
-            ease: 'easeInOut'
-          }}
-        />
+        <span className="islandPulse" />
         <span className="islandTitle">{islandTitle(snapshot.agent)}</span>
         <span className="islandCliStack" aria-label={`当前活跃 CLI：${activeCliLabel(snapshot.agent)}`}>
           {compactAgentItems(snapshot.agent).map((item) => (
@@ -149,7 +178,7 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={contentTransition}
           >
             <div className="islandAgentRow">
               {visibleItems.map((item) => (
@@ -215,7 +244,7 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
           </motion.section>
         ) : null}
       </AnimatePresence>
-    </motion.main>
+    </main>
   )
 }
 
@@ -235,7 +264,7 @@ function IslandMetric({
       className={`islandMetric islandMetric-${tone}`}
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18, ease: 'easeOut' }}
+      transition={contentTransition}
     >
       {icon}
       <span>{label}</span>

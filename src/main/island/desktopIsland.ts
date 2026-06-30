@@ -129,7 +129,7 @@ export class DesktopIslandController {
     }
 
     const nextBounds = this.bounds()
-    this.window.setBounds(nextBounds, true)
+    this.window.setBounds(nextBounds, false)
     this.saveBounds(nextBounds)
   }
 
