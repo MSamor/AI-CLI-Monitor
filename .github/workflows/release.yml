@@ -154,27 +154,9 @@ jobs:
             - **macOS**: 下载 `.dmg` 或 `.zip` 文件
             - **Linux**: 下载 `.AppImage` 或 `.deb` 包
 
-            ## ✨ 本次更新
-
-            - 🏝️ 启动后默认打开桌面灵动岛，并记住上次位置。
-            - 🖥️ 主窗口关闭后进入状态栏/托盘，点击托盘图标可重新打开。
-            - 🧠 支持 Claude / Codex hook 状态监听，区分 AI 生成中、等待确认和空闲。
-            - 🔵 支持 Pico 2 W BLE 指示灯；没有硬件时可使用模拟蓝牙模式。
-            - ⏱️ AI 生成中兜底超时已调长，适配几分钟的长输出任务。
-
-            ## ⚠️ 验证状态
-
-            当前版本尚未完成完整端到端验证。首次使用建议先用模拟蓝牙模式验证软件状态，再配置 hook 和真实 Pico 硬件。
-
             ## 🪝 首次配置
 
-            启动应用后，请按 README 配置 Claude / Codex hooks：
-
-            - Claude: `scripts/claude-hook.js`
-            - Codex: `scripts/codex-hook.js` 和 `scripts/codex-hooks.json`
-
-            下方自动生成的更新日志包含本次 tag 对应的 commit / PR 记录。
-
+            启动应用后，在主界面开启hook，重启AI CLI 工具即可开始监听使用
             ---
 
             > **首次使用？** 请查看 [README](https://github.com/${{ github.repository }}) 了解使用说明

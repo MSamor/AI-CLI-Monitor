@@ -25,7 +25,6 @@ type StateManagerOptions = {
   resendMs?: number
   maxEvents?: number
   activityTimeoutMs?: number
-  codexSettledTimeoutMs?: number
 }
 
 export class StateManager extends EventEmitter {
@@ -50,7 +49,6 @@ export class StateManager extends EventEmitter {
   private readonly resendMs: number
   private readonly maxEvents: number
   private readonly activityTimeoutMs: number
-  private readonly codexSettledTimeoutMs: number
 
   constructor(
     private ble: BleTransport,
@@ -61,7 +59,6 @@ export class StateManager extends EventEmitter {
     this.resendMs = options.resendMs ?? 30_000
     this.maxEvents = options.maxEvents ?? 80
     this.activityTimeoutMs = options.activityTimeoutMs ?? 5 * 60_000
-    this.codexSettledTimeoutMs = options.codexSettledTimeoutMs ?? 5_000
     this.attachBle()
   }
 
@@ -120,19 +117,23 @@ export class StateManager extends EventEmitter {
     this.refreshAgentActivityTimeout('codex', next)
   }
 
-  setCodexHookActivity(payload: ClaudeHookPayload, nextState?: CodexState): void {
+  setCodexHookActivity(
+    payload: ClaudeHookPayload,
+    nextState?: CodexState,
+    source = 'Codex 官方 hook'
+  ): void {
     this.codexActivity = createCodexActivitySnapshot(payload)
 
     if (nextState) {
       this.updateAgent(
         { codex: nextState },
-        `Codex 官方 hook：${this.codexActivity.label}。${this.codexActivity.detail}`
+        `${source}：${this.codexActivity.label}。${this.codexActivity.detail}`
       )
-      this.refreshAgentActivityTimeout('codex', nextState, this.timeoutForCodexActivity())
+      this.refreshAgentActivityTimeout('codex', nextState)
       return
     }
 
-    this.addEvent('info', `Codex 官方 hook：${this.codexActivity.label}。`)
+    this.addEvent('info', `${source}：${this.codexActivity.label}。`)
     this.emitSnapshot()
   }
 
@@ -310,29 +311,17 @@ export class StateManager extends EventEmitter {
     this.codexActivity = {
       phase: 'idle',
       label: 'Codex 可能已停止',
-      detail: `超过 ${this.timeoutSeconds(timeoutMs)} 秒没有收到新的 Codex hook，已自动恢复为空闲。`,
+      detail: `超过 ${this.timeoutSeconds(timeoutMs)} 秒没有收到新的 Codex 活动，已自动恢复为空闲。`,
       updatedAt: new Date().toISOString()
     }
     this.updateAgent(
       { codex: 'idle' },
-      `Codex 超过 ${this.timeoutSeconds(timeoutMs)} 秒没有新的 hook 活动，已恢复为空闲。`
+      `Codex 超过 ${this.timeoutSeconds(timeoutMs)} 秒没有新的活动，已恢复为空闲。`
     )
   }
 
   private timeoutSeconds(timeoutMs: number): number {
     return Math.round(timeoutMs / 1000)
-  }
-
-  private timeoutForCodexActivity(): number {
-    if (
-      this.codexActivity.phase === 'tool-done' ||
-      this.codexActivity.phase === 'compact-done' ||
-      this.codexActivity.phase === 'subagent'
-    ) {
-      return this.codexSettledTimeoutMs
-    }
-
-    return this.activityTimeoutMs
   }
 
   private async flushGlobalState(force = false): Promise<void> {

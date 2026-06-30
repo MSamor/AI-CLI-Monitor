@@ -1,83 +1,95 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="AI CLI Monitor app icon">
   <defs>
-    <linearGradient id="bg" x1="180" y1="120" x2="850" y2="920" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#121826"/>
-      <stop offset="0.45" stop-color="#171b2f"/>
-      <stop offset="1" stop-color="#071018"/>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
     </linearGradient>
-    <linearGradient id="panel" x1="210" y1="250" x2="780" y2="820" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#24304a"/>
-      <stop offset="1" stop-color="#101722"/>
+    <linearGradient id="terminal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
     </linearGradient>
-    <linearGradient id="ring" x1="220" y1="210" x2="820" y2="820" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#6df7ff"/>
-      <stop offset="0.52" stop-color="#7c5cff"/>
-      <stop offset="1" stop-color="#ff4f87"/>
+    <linearGradient id="prompt-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
     </linearGradient>
-    <linearGradient id="terminal" x1="290" y1="324" x2="720" y2="714" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#161f2e"/>
-      <stop offset="1" stop-color="#050b12"/>
-    </linearGradient>
-    <radialGradient id="glowRed" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(704 338) rotate(90) scale(170)">
-      <stop offset="0" stop-color="#ff5b7b" stop-opacity="0.95"/>
-      <stop offset="1" stop-color="#ff5b7b" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="glowCyan" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(346 666) rotate(90) scale(210)">
-      <stop offset="0" stop-color="#54eaff" stop-opacity="0.75"/>
-      <stop offset="1" stop-color="#54eaff" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="28" stdDeviation="28" flood-color="#000000" flood-opacity="0.38"/>
-    </filter>
-    <filter id="lineGlow" x="-100%" y="-100%" width="300%" height="300%" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="4" result="blur"/>
+    <filter id="glow-filter">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
       <feMerge>
-        <feMergeNode in="blur"/>
+        <feMergeNode in="coloredBlur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
-    <clipPath id="rounded">
-      <rect x="64" y="64" width="896" height="896" rx="210"/>
-    </clipPath>
+    <filter id="soft-shadow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="16"/>
+      <feOffset dx="0" dy="8" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
-  <rect x="64" y="64" width="896" height="896" rx="210" fill="url(#bg)"/>
-  <g clip-path="url(#rounded)">
-    <circle cx="704" cy="338" r="210" fill="url(#glowRed)"/>
-    <circle cx="346" cy="666" r="250" fill="url(#glowCyan)"/>
-    <path d="M158 742C294 624 359 531 493 542C629 553 676 446 866 300" fill="none" stroke="#27344d" stroke-width="34" opacity="0.55"/>
-    <path d="M168 778C324 639 393 612 527 632C652 651 725 553 876 462" fill="none" stroke="#24304a" stroke-width="22" opacity="0.42"/>
+  <!-- 圆角背景 -->
+  <rect width="1024" height="1024" rx="226" fill="url(#bg)"/>
+
+  <!-- 终端窗口主体 -->
+  <g filter="url(#soft-shadow)">
+    <rect x="140" y="280" width="744" height="520" rx="56" fill="url(#terminal)"/>
+
+    <!-- 窗口顶栏 -->
+    <rect x="140" y="280" width="744" height="80" rx="56" fill="#1e293b"/>
+    <rect x="140" y="320" width="744" height="40" fill="#1e293b"/>
+
+    <!-- 窗口控制按钮 -->
+    <circle cx="200" cy="320" r="14" fill="#ef4444"/>
+    <circle cx="250" cy="320" r="14" fill="#f59e0b"/>
+    <circle cx="300" cy="320" r="14" fill="#22c55e"/>
   </g>
 
-  <rect x="170" y="170" width="684" height="684" rx="180" fill="none" stroke="url(#ring)" stroke-width="26" opacity="0.92"/>
-  <rect x="220" y="258" width="584" height="508" rx="84" fill="url(#panel)" filter="url(#softShadow)"/>
-  <rect x="260" y="308" width="504" height="390" rx="56" fill="url(#terminal)" stroke="#31405c" stroke-width="6"/>
+  <!-- CLI 提示符 -->
+  <g filter="url(#glow-filter)">
+    <path d="M220 460 L310 530 L220 600"
+          fill="none"
+          stroke="url(#prompt-grad)"
+          stroke-width="32"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
 
-  <g opacity="0.92">
-    <circle cx="325" cy="365" r="18" fill="#ff5d7a"/>
-    <circle cx="378" cy="365" r="18" fill="#ffd35a"/>
-    <circle cx="431" cy="365" r="18" fill="#54e88b"/>
+    <!-- 光标 -->
+    <rect x="350" y="505" width="28" height="50" rx="4" fill="#3b82f6" opacity="0.8">
+      <animate attributeName="opacity" values="0.8;0.2;0.8" dur="1.2s" repeatCount="indefinite"/>
+    </rect>
   </g>
 
-  <g filter="url(#lineGlow)" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M354 500L428 560L354 620" fill="none" stroke="#71f6ff" stroke-width="38"/>
-    <path d="M480 623H612" fill="none" stroke="#f5f7ff" stroke-width="38"/>
+  <!-- 代码行装饰 -->
+  <rect x="220" y="650" width="280" height="16" rx="8" fill="#334155" opacity="0.4"/>
+  <rect x="220" y="690" width="420" height="16" rx="8" fill="#334155" opacity="0.3"/>
+  <rect x="220" y="730" width="200" height="16" rx="8" fill="#334155" opacity="0.2"/>
+
+  <!-- 状态指示灯组 -->
+  <g transform="translate(680, 500)">
+    <!-- 灯座 -->
+    <rect x="-60" y="-30" width="120" height="200" rx="28" fill="#0f172a" opacity="0.6"/>
+
+    <!-- 三色状态灯 -->
+    <g filter="url(#glow-filter)">
+      <circle cx="0" cy="10" r="26" fill="#22c55e" opacity="0.9"/>
+      <circle cx="0" cy="10" r="18" fill="#34d399"/>
+
+      <circle cx="0" cy="80" r="26" fill="#f59e0b" opacity="0.9"/>
+      <circle cx="0" cy="80" r="18" fill="#fbbf24"/>
+
+      <circle cx="0" cy="150" r="26" fill="#ef4444" opacity="0.9"/>
+      <circle cx="0" cy="150" r="18" fill="#f87171"/>
+    </g>
   </g>
 
-  <g transform="translate(640 408)">
-    <circle cx="74" cy="74" r="82" fill="#121b29" stroke="#ff4f87" stroke-width="16"/>
-    <path d="M74 28V120L118 82" fill="none" stroke="#ff86a8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M74 120L30 82" fill="none" stroke="#ff86a8" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="74" cy="74" r="23" fill="#ff4f87"/>
+  <!-- AI 装饰元素 -->
+  <g opacity="0.15">
+    <circle cx="512" cy="512" r="380" fill="none" stroke="#3b82f6" stroke-width="2"/>
+    <circle cx="512" cy="512" r="420" fill="none" stroke="#06b6d4" stroke-width="1"/>
   </g>
-
-  <g transform="translate(290 640)">
-    <rect x="0" y="0" width="444" height="76" rx="38" fill="#09121b" stroke="#2f405d" stroke-width="4"/>
-    <circle cx="58" cy="38" r="18" fill="#54e88b"/>
-    <circle cx="116" cy="38" r="18" fill="#ffd35a"/>
-    <circle cx="174" cy="38" r="18" fill="#ff5d7a"/>
-    <path d="M240 38H388" stroke="#81f6ff" stroke-width="18" stroke-linecap="round" opacity="0.86"/>
-  </g>
-
-  <path d="M262 236C360 176 492 151 614 184" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" opacity="0.12"/>
 </svg>

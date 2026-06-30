@@ -32,7 +32,7 @@ const contentTransition = {
   ease: 'easeOut'
 } as const
 const COLLAPSE_DELAY_MS = 1000
-const RESIZE_ANIMATION_MS = 380
+const RESIZE_ANIMATION_MS = 460
 
 export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element {
   const [expanded, setExpanded] = useState(false)
@@ -70,16 +70,23 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
     clearCollapseTimer()
     clearResizeTimer()
 
-    if (expanded) {
+    if (expandedRef.current) {
       return
     }
 
     expandedRef.current = true
-    setRenderExpandedBounds(true)
-    void window.aiMonitor.setDesktopIslandExpanded(true)
-    scheduleAnimationFrame(() => {
-      setExpanded(true)
-    })
+    void (async () => {
+      await window.aiMonitor.setDesktopIslandExpanded(true)
+
+      if (!expandedRef.current) {
+        return
+      }
+
+      scheduleAnimationFrames(() => {
+        setRenderExpandedBounds(true)
+        setExpanded(true)
+      }, 2)
+    })()
   }
 
   const collapse = (): void => {
@@ -92,10 +99,10 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
 
     expandedRef.current = false
     setExpanded(false)
+    setRenderExpandedBounds(false)
+    void window.aiMonitor.setDesktopIslandExpanded(false)
     clearResizeTimer()
     resizeTimerRef.current = setTimeout(() => {
-      setRenderExpandedBounds(false)
-      void window.aiMonitor.setDesktopIslandExpanded(false)
       resizeTimerRef.current = undefined
     }, RESIZE_ANIMATION_MS)
   }
@@ -118,13 +125,23 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
     resizeTimerRef.current = undefined
   }
 
-  const scheduleAnimationFrame = (callback: () => void): void => {
+  const scheduleAnimationFrames = (callback: () => void, frames = 1): void => {
     clearAnimationFrame()
 
-    animationFrameRef.current = requestAnimationFrame(() => {
-      animationFrameRef.current = undefined
-      callback()
-    })
+    const tick = (remainingFrames: number): void => {
+      animationFrameRef.current = requestAnimationFrame(() => {
+        animationFrameRef.current = undefined
+
+        if (remainingFrames <= 1) {
+          callback()
+          return
+        }
+
+        tick(remainingFrames - 1)
+      })
+    }
+
+    tick(frames)
   }
 
   const clearAnimationFrame = (): void => {
@@ -143,107 +160,109 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
       } ${expanded ? 'island-open' : 'island-closed'}`}
       onPointerDown={clearCollapseTimer}
     >
-      <div className="islandDragHandle" title="拖拽移动灵动岛">
-        <Grip size={12} />
-      </div>
+      <div className="islandShell">
+        <div className="islandDragHandle" title="拖拽移动灵动岛">
+          <Grip size={12} />
+        </div>
 
-      <button className="islandTapSurface" type="button" onClick={expand}>
-        <span className="islandPulse" />
-        <span className="islandTitle">{islandTitle(snapshot.agent)}</span>
-        <span className="islandCliStack" aria-label={`当前活跃 CLI：${activeCliLabel(snapshot.agent)}`}>
-          {compactAgentItems(snapshot.agent).map((item) => (
-            <span
-              className={`islandCompactCli islandCompactCli-${item.state}`}
-              key={item.name}
-              title={`${item.name}：${labelForAgentState(item.state)}`}
-            >
-              {item.name === 'Claude' ? <Brain size={11} /> : <Sparkles size={11} />}
-            </span>
-          ))}
-        </span>
-        <span className="islandMeta">{activeCliLabel(snapshot.agent)}</span>
-        <span
-          className={`islandBle islandBle-${toneForBleState(snapshot.ble.state)}`}
-          title={`蓝牙：${labelForBleState(snapshot.ble.state)}`}
-          aria-label={`蓝牙：${labelForBleState(snapshot.ble.state)}`}
-        >
-          <Bluetooth size={12} />
-        </span>
-      </button>
-
-      <AnimatePresence>
-        {expanded ? (
-          <motion.section
-            className="islandDetails"
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={contentTransition}
+        <button className="islandTapSurface" type="button" onClick={expand}>
+          <span className="islandPulse" />
+          <span className="islandTitle">{islandTitle(snapshot.agent)}</span>
+          <span className="islandCliStack" aria-label={`当前活跃 CLI：${activeCliLabel(snapshot.agent)}`}>
+            {compactAgentItems(snapshot.agent).map((item) => (
+              <span
+                className={`islandCompactCli islandCompactCli-${item.state}`}
+                key={item.name}
+                title={`${item.name}：${labelForAgentState(item.state)}`}
+              >
+                {item.name === 'Claude' ? <Brain size={11} /> : <Sparkles size={11} />}
+              </span>
+            ))}
+          </span>
+          <span className="islandMeta">{activeCliLabel(snapshot.agent)}</span>
+          <span
+            className={`islandBle islandBle-${toneForBleState(snapshot.ble.state)}`}
+            title={`蓝牙：${labelForBleState(snapshot.ble.state)}`}
+            aria-label={`蓝牙：${labelForBleState(snapshot.ble.state)}`}
           >
-            <div className="islandAgentRow">
-              {visibleItems.map((item) => (
-                <div className={`islandAgent islandAgent-${item.state}`} key={item.name}>
-                  <span className={`islandAgentLogo islandAgentLogo-${item.state}`} aria-hidden="true">
-                    {item.name === 'Claude' ? <Brain size={13} /> : <Sparkles size={13} />}
-                  </span>
-                  <span>{item.name}</span>
-                  <strong>{labelForAgentState(item.state)}</strong>
-                </div>
-              ))}
-            </div>
-            <IslandMetric
-              icon={<Circle size={13} />}
-              label="全局"
-              value={labelForGlobalState(snapshot.agent.global)}
-              tone={snapshot.agent.global}
-            />
-            <IslandMetric
-              icon={<Radio size={13} />}
-              label="设备"
-              value={snapshot.ble.deviceName ?? '未发现设备'}
-              tone={toneForBleState(snapshot.ble.state)}
-            />
-            <IslandMetric
-              icon={<Zap size={13} />}
-              label="灯控"
-              value={snapshot.ble.lastCommand ?? commandForGlobal(snapshot.agent.global)}
-              tone={snapshot.agent.global}
-            />
-            <div className="islandCodexStep">
-              <Activity size={12} />
-              <span>{snapshot.codexActivity.label}</span>
-              <strong>{snapshot.codexActivity.toolName ?? snapshot.codexActivity.eventName ?? 'hook'}</strong>
-            </div>
-            {snapshot.codexActivity.command ? (
-              <div className="islandDiagnostic">{snapshot.codexActivity.command}</div>
-            ) : null}
-            {snapshot.codexActivity.turnId || snapshot.codexActivity.model ? (
-              <div className="islandDiagnostic">
-                {compactCodexMeta(snapshot.codexActivity.turnId, snapshot.codexActivity.model)}
-              </div>
-            ) : null}
-            <div className="islandEventStack">
-              {recentEvents.length === 0 ? (
-                <div className="islandEvent">
-                  <Timer size={12} />
-                  <span>暂无事件</span>
-                </div>
-              ) : (
-                recentEvents.map((event) => (
-                  <div className={`islandEvent islandEvent-${event.level}`} key={event.id}>
-                    <Timer size={12} />
-                    <time>{formatEventTime(event.at)}</time>
-                    <span>{event.message}</span>
+            <Bluetooth size={12} />
+          </span>
+        </button>
+
+        <AnimatePresence>
+          {expanded ? (
+            <motion.section
+              className="islandDetails"
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -6, scale: 0.98 }}
+              transition={contentTransition}
+            >
+              <div className="islandAgentRow">
+                {visibleItems.map((item) => (
+                  <div className={`islandAgent islandAgent-${item.state}`} key={item.name}>
+                    <span className={`islandAgentLogo islandAgentLogo-${item.state}`} aria-hidden="true">
+                      {item.name === 'Claude' ? <Brain size={13} /> : <Sparkles size={13} />}
+                    </span>
+                    <span>{item.name}</span>
+                    <strong>{labelForAgentState(item.state)}</strong>
                   </div>
-                ))
-              )}
-            </div>
-            {snapshot.ble.diagnostic ? (
-              <div className="islandDiagnostic">{snapshot.ble.diagnostic}</div>
-            ) : null}
-          </motion.section>
-        ) : null}
-      </AnimatePresence>
+                ))}
+              </div>
+              <IslandMetric
+                icon={<Circle size={13} />}
+                label="全局"
+                value={labelForGlobalState(snapshot.agent.global)}
+                tone={snapshot.agent.global}
+              />
+              <IslandMetric
+                icon={<Radio size={13} />}
+                label="设备"
+                value={snapshot.ble.deviceName ?? '未发现设备'}
+                tone={toneForBleState(snapshot.ble.state)}
+              />
+              <IslandMetric
+                icon={<Zap size={13} />}
+                label="灯控"
+                value={snapshot.ble.lastCommand ?? commandForGlobal(snapshot.agent.global)}
+                tone={snapshot.agent.global}
+              />
+              <div className="islandCodexStep">
+                <Activity size={12} />
+                <span>{snapshot.codexActivity.label}</span>
+                <strong>{snapshot.codexActivity.toolName ?? snapshot.codexActivity.eventName ?? 'hook'}</strong>
+              </div>
+              {snapshot.codexActivity.command ? (
+                <div className="islandDiagnostic">{snapshot.codexActivity.command}</div>
+              ) : null}
+              {snapshot.codexActivity.turnId || snapshot.codexActivity.model ? (
+                <div className="islandDiagnostic">
+                  {compactCodexMeta(snapshot.codexActivity.turnId, snapshot.codexActivity.model)}
+                </div>
+              ) : null}
+              <div className="islandEventStack">
+                {recentEvents.length === 0 ? (
+                  <div className="islandEvent">
+                    <Timer size={12} />
+                    <span>暂无事件</span>
+                  </div>
+                ) : (
+                  recentEvents.map((event) => (
+                    <div className={`islandEvent islandEvent-${event.level}`} key={event.id}>
+                      <Timer size={12} />
+                      <time>{formatEventTime(event.at)}</time>
+                      <span>{event.message}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+              {snapshot.ble.diagnostic ? (
+                <div className="islandDiagnostic">{snapshot.ble.diagnostic}</div>
+              ) : null}
+            </motion.section>
+          ) : null}
+        </AnimatePresence>
+      </div>
     </main>
   )
 }

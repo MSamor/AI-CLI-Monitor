@@ -2,6 +2,7 @@ import path from 'node:path'
 import { homedir } from 'node:os'
 import { promises as fs } from 'node:fs'
 import type { StateManager } from '../state/stateManager'
+import type { ClaudeHookPayload, CodexState } from '../../shared/types'
 import { listProcesses, type ProcessInfo } from './processList'
 
 type CodexProcessWatcherOptions = {
@@ -16,6 +17,7 @@ export class CodexProcessWatcher {
   private cleanPolls = 0
   private running = false
   private readonly sessionOffsets = new Map<string, number>()
+  private readonly pendingSessionLines = new Map<string, string>()
   private readonly startedAtMs = Date.now()
   private readonly pollMs: number
   private readonly currentPid: number
@@ -84,6 +86,14 @@ export class CodexProcessWatcher {
 
   private async pollSessionEvents(): Promise<void> {
     const sessionFiles = await this.listRecentSessionFiles()
+    const recentFiles = new Set(sessionFiles)
+
+    for (const file of this.sessionOffsets.keys()) {
+      if (!recentFiles.has(file)) {
+        this.sessionOffsets.delete(file)
+        this.pendingSessionLines.delete(file)
+      }
+    }
 
     for (const file of sessionFiles) {
       await this.readNewSessionLines(file)
@@ -113,12 +123,20 @@ export class CodexProcessWatcher {
 
     if (!stat) {
       this.sessionOffsets.delete(file)
+      this.pendingSessionLines.delete(file)
       return
     }
 
     const previousOffset = this.sessionOffsets.get(file)
+    const wasTruncated = previousOffset !== undefined && previousOffset > stat.size
     const startOffset =
-      previousOffset === undefined ? Math.max(0, stat.size - 16 * 1024) : previousOffset
+      previousOffset === undefined || wasTruncated
+        ? Math.max(0, stat.size - 16 * 1024)
+        : previousOffset
+
+    if (wasTruncated) {
+      this.pendingSessionLines.delete(file)
+    }
 
     if (stat.size <= startOffset) {
       this.sessionOffsets.set(file, stat.size)
@@ -136,15 +154,26 @@ export class CodexProcessWatcher {
       const buffer = Buffer.alloc(length)
       await handle.read(buffer, 0, length, startOffset)
       this.sessionOffsets.set(file, stat.size)
-      this.handleSessionChunk(buffer.toString('utf8'))
+      this.handleSessionChunk(file, buffer.toString('utf8'))
     } finally {
       await handle.close()
     }
   }
 
-  private handleSessionChunk(chunk: string): void {
-    for (const line of chunk.split('\n')) {
-      if (!line.includes('turn_aborted')) {
+  private handleSessionChunk(file: string, chunk: string): void {
+    const text = `${this.pendingSessionLines.get(file) ?? ''}${chunk}`
+    const lines = text.split(/\r?\n/)
+    const hasTrailingNewline = text.endsWith('\n')
+    const completeLines = hasTrailingNewline ? lines : lines.slice(0, -1)
+
+    if (hasTrailingNewline) {
+      this.pendingSessionLines.delete(file)
+    } else {
+      this.pendingSessionLines.set(file, lines.at(-1) ?? '')
+    }
+
+    for (const line of completeLines) {
+      if (!line.trim()) {
         continue
       }
 
@@ -154,19 +183,13 @@ export class CodexProcessWatcher {
         continue
       }
 
-      if (event.type !== 'event_msg' || event.payload?.type !== 'turn_aborted') {
+      const activity = sessionActivityForEvent(event)
+
+      if (!activity) {
         continue
       }
 
-      this.stateManager.setCodexHookActivity(
-        {
-          hook_event_name: 'TurnAborted',
-          event: 'TurnAborted',
-          turn_id: toOptionalString(event.payload.turn_id),
-          last_assistant_message: '用户手动中断了 Codex 本轮输出。'
-        },
-        'idle'
-      )
+      this.stateManager.setCodexHookActivity(activity.payload, activity.state, 'Codex 会话记录')
     }
   }
 }
@@ -174,10 +197,12 @@ export class CodexProcessWatcher {
 type CodexSessionLine = {
   timestamp?: string
   type?: string
-  payload?: {
-    type?: string
-    turn_id?: unknown
-  }
+  payload?: Record<string, unknown>
+}
+
+type CodexSessionActivity = {
+  state: CodexState
+  payload: ClaudeHookPayload
 }
 
 export function isCodexProcess(
@@ -235,6 +260,183 @@ function isFreshEvent(timestamp: string | undefined, startedAtMs: number): boole
   const eventAt = Date.parse(timestamp)
 
   return Number.isFinite(eventAt) && eventAt >= startedAtMs - 5_000
+}
+
+function sessionActivityForEvent(event: CodexSessionLine): CodexSessionActivity | undefined {
+  const payload = isRecord(event.payload) ? event.payload : {}
+  const payloadType = toOptionalString(payload.type)?.toLowerCase()
+
+  switch (payloadType) {
+    case 'task_started':
+      return createSessionActivity(event, 'UserPromptSubmit', 'running', 'Codex 已开始处理本轮任务。')
+    case 'agent_message':
+      return createSessionActivity(
+        event,
+        'Running',
+        'running',
+        toOptionalString(payload.message) ?? 'Codex 正在输出。'
+      )
+    case 'agent_reasoning':
+    case 'reasoning':
+      return createSessionActivity(event, 'Running', 'running', 'Codex 正在推理。')
+    case 'message': {
+      const role = toOptionalString(payload.role)?.toLowerCase()
+
+      if (role !== 'assistant') {
+        return undefined
+      }
+
+      return createSessionActivity(
+        event,
+        'Running',
+        'running',
+        extractMessageText(payload.content) ?? 'Codex 正在输出。'
+      )
+    }
+    case 'function_call':
+    case 'custom_tool_call':
+      return createSessionActivity(event, 'PreToolUse', 'running', undefined)
+    case 'tool_search_call':
+      return createSessionActivity(event, 'PreToolUse', 'running', undefined, 'tool_search')
+    case 'web_search_call':
+      return createSessionActivity(event, 'PreToolUse', 'running', undefined, 'web_search')
+    case 'patch_apply_begin':
+      return createSessionActivity(event, 'PreToolUse', 'running', undefined, 'apply_patch')
+    case 'function_call_output':
+    case 'custom_tool_call_output':
+      return createSessionActivity(event, 'PostToolUse', 'running', '工具返回结果已写入 Codex 会话。')
+    case 'tool_search_output':
+      return createSessionActivity(
+        event,
+        'PostToolUse',
+        'running',
+        '工具返回结果已写入 Codex 会话。',
+        'tool_search'
+      )
+    case 'web_search_end':
+      return createSessionActivity(
+        event,
+        'PostToolUse',
+        'running',
+        '工具返回结果已写入 Codex 会话。',
+        'web_search'
+      )
+    case 'mcp_tool_call_end':
+      return createSessionActivity(
+        event,
+        'PostToolUse',
+        'running',
+        '工具返回结果已写入 Codex 会话。',
+        'MCP tool'
+      )
+    case 'patch_apply_end':
+      return createSessionActivity(
+        event,
+        'PostToolUse',
+        'running',
+        '补丁应用结果已写入 Codex 会话。',
+        'apply_patch'
+      )
+    case 'task_complete':
+      return createSessionActivity(
+        event,
+        'Stop',
+        'idle',
+        toOptionalString(payload.last_agent_message) ?? 'Codex 本轮输出完成。'
+      )
+    case 'turn_aborted':
+      return createSessionActivity(event, 'TurnAborted', 'idle', '用户手动中断了 Codex 本轮输出。')
+    case 'thread_rolled_back':
+      return createSessionActivity(event, 'TurnAborted', 'idle', 'Codex 对话已回滚。')
+    default:
+      return undefined
+  }
+}
+
+function createSessionActivity(
+  event: CodexSessionLine,
+  eventName: string,
+  state: CodexState,
+  detail?: string,
+  fallbackToolName?: string
+): CodexSessionActivity {
+  const payload = isRecord(event.payload) ? event.payload : {}
+  const toolName =
+    toOptionalString(payload.name) ?? toOptionalString(payload.tool_name) ?? fallbackToolName
+
+  return {
+    state,
+    payload: {
+      hook_event_name: eventName,
+      event: eventName,
+      source: 'codex-session',
+      session_id: toOptionalString(payload.session_id),
+      turn_id: toOptionalString(payload.turn_id),
+      tool_name: toolName,
+      tool_use_id: toOptionalString(payload.call_id) ?? toOptionalString(payload.tool_use_id),
+      tool_input: toolInputForSessionPayload(payload),
+      model: toOptionalString(payload.model),
+      cwd: toOptionalString(payload.cwd),
+      last_assistant_message: detail
+    }
+  }
+}
+
+function toolInputForSessionPayload(payload: Record<string, unknown>): unknown {
+  if ('tool_input' in payload) {
+    return payload.tool_input
+  }
+
+  if ('input' in payload) {
+    return payload.input
+  }
+
+  const args = payload.arguments
+
+  if (typeof args !== 'string') {
+    return args
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(args)
+    return parsed
+  } catch {
+    return { command: args }
+  }
+}
+
+function extractMessageText(value: unknown): string | undefined {
+  const direct = toOptionalString(value)
+
+  if (direct) {
+    return direct
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const text = extractMessageText(item)
+
+      if (text) {
+        return text
+      }
+    }
+
+    return undefined
+  }
+
+  if (!isRecord(value)) {
+    return undefined
+  }
+
+  return (
+    toOptionalString(value.text) ??
+    toOptionalString(value.content) ??
+    toOptionalString(value.message)
+  )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
 function toOptionalString(value: unknown): string | undefined {

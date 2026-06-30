@@ -12,12 +12,17 @@ const TOP_OFFSET = 2
 const EDGE_PADDING = 8
 const SNAP_TO_TOP_DELAY_MS = 420
 const SNAP_LOCK_MS = 220
+const RESIZE_ANIMATION_MS = 460
+const PROGRAMMATIC_MOVE_LOCK_MS = 90
 
 export class DesktopIslandController {
   private window?: BrowserWindow
   private expanded = false
   private snapTimer?: NodeJS.Timeout
   private snapping = false
+  private resizeTimer?: NodeJS.Timeout
+  private programmaticMoveTimer?: NodeJS.Timeout
+  private applyingBounds = false
 
   constructor(
     private stateManager: StateManager,
@@ -74,6 +79,7 @@ export class DesktopIslandController {
     })
     this.window.on('closed', () => {
       this.clearSnapTimer()
+      this.clearProgrammaticMoveTimer()
       this.window = undefined
       this.expanded = false
       this.stateManager.setDesktopIslandEnabled(false, false)
@@ -87,6 +93,8 @@ export class DesktopIslandController {
 
     if (this.window && !this.window.isDestroyed()) {
       this.clearSnapTimer()
+      this.clearResizeTimer()
+      this.clearProgrammaticMoveTimer()
       this.applyBounds()
       this.window.close()
       return
@@ -98,6 +106,8 @@ export class DesktopIslandController {
   dispose(): void {
     if (this.window && !this.window.isDestroyed()) {
       this.clearSnapTimer()
+      this.clearResizeTimer()
+      this.clearProgrammaticMoveTimer()
       this.applyBounds()
       this.window.close()
     }
@@ -109,7 +119,18 @@ export class DesktopIslandController {
     }
 
     this.expanded = expanded
-    this.applyBounds()
+    this.clearResizeTimer()
+
+    if (expanded) {
+      // 展开时：立即改变窗口大小，让前端动画在正确的空间内进行
+      this.applyBounds()
+    } else {
+      // 收起时：延迟改变窗口大小，等待前端动画完成。
+      this.resizeTimer = setTimeout(() => {
+        this.applyBounds()
+        this.resizeTimer = undefined
+      }, RESIZE_ANIMATION_MS)
+    }
   }
 
   private async loadIslandRoute(window: BrowserWindow): Promise<void> {
@@ -129,12 +150,25 @@ export class DesktopIslandController {
     }
 
     const nextBounds = this.bounds()
+    const currentBounds = this.window.getBounds()
+
+    if (sameBounds(currentBounds, nextBounds)) {
+      this.saveBounds(nextBounds)
+      return
+    }
+
+    this.clearProgrammaticMoveTimer()
+    this.applyingBounds = true
     this.window.setBounds(nextBounds, false)
     this.saveBounds(nextBounds)
+    this.programmaticMoveTimer = setTimeout(() => {
+      this.applyingBounds = false
+      this.programmaticMoveTimer = undefined
+    }, PROGRAMMATIC_MOVE_LOCK_MS)
   }
 
   private scheduleSnapToTop(): void {
-    if (!this.window || this.window.isDestroyed() || this.snapping) {
+    if (!this.window || this.window.isDestroyed() || this.snapping || this.applyingBounds) {
       return
     }
 
@@ -164,6 +198,24 @@ export class DesktopIslandController {
 
     clearTimeout(this.snapTimer)
     this.snapTimer = undefined
+  }
+
+  private clearResizeTimer(): void {
+    if (!this.resizeTimer) {
+      return
+    }
+
+    clearTimeout(this.resizeTimer)
+    this.resizeTimer = undefined
+  }
+
+  private clearProgrammaticMoveTimer(): void {
+    if (this.programmaticMoveTimer) {
+      clearTimeout(this.programmaticMoveTimer)
+      this.programmaticMoveTimer = undefined
+    }
+
+    this.applyingBounds = false
   }
 
   private bounds(): Electron.Rectangle {
@@ -220,6 +272,15 @@ function clamp(value: number, min: number, max: number): number {
   }
 
   return Math.min(Math.max(value, min), max)
+}
+
+function sameBounds(left: Electron.Rectangle, right: Electron.Rectangle): boolean {
+  return (
+    left.x === right.x &&
+    left.y === right.y &&
+    left.width === right.width &&
+    left.height === right.height
+  )
 }
 
 function intersectsAnyDisplay(bounds: Electron.Rectangle): boolean {
