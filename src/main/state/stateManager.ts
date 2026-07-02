@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import { ledCommandForGlobalState } from '../../shared/protocol'
+import { buildMonitorStatusPayload, ledCommandForGlobalState } from '../../shared/protocol'
 import {
   computeGlobalState,
   createCodexActivitySnapshot,
@@ -9,6 +9,7 @@ import {
 } from '../../shared/state'
 import type {
   AgentState,
+  BlePayload,
   ClaudeState,
   ClaudeHookPayload,
   CodexActivitySnapshot,
@@ -43,7 +44,7 @@ export class StateManager extends EventEmitter {
   private resendTimer?: NodeJS.Timeout
   private claudeActivityTimer?: NodeJS.Timeout
   private codexActivityTimer?: NodeJS.Timeout
-  private lastSentCommand?: LedCommand
+  private lastSentPayload?: BlePayload
   private removeBleStatusListener?: () => void
   private bleReady = false
   private flushing = false
@@ -128,15 +129,24 @@ export class StateManager extends EventEmitter {
     this.codexActivity = createCodexActivitySnapshot(payload)
 
     if (nextState) {
-      this.updateAgent(
+      const agentChanged = this.updateAgent(
         { codex: nextState },
         `${source}：${this.codexActivity.label}。${this.codexActivity.detail}`
       )
       this.refreshAgentActivityTimeout('codex', nextState)
+      // Codex 阶段可能变化但 running/waiting/idle 不变，ESP32 屏幕也需要刷新。
+      this.scheduleFlush()
+
+      if (!agentChanged) {
+        this.addEvent('info', `${source}：${this.codexActivity.label}。`)
+        this.emitSnapshot()
+      }
+
       return
     }
 
     this.addEvent('info', `${source}：${this.codexActivity.label}。`)
+    this.scheduleFlush()
     this.emitSnapshot()
   }
 
@@ -201,7 +211,7 @@ export class StateManager extends EventEmitter {
 
   async setManualLed(command: LedCommand): Promise<void> {
     await this.ble.send(command)
-    this.lastSentCommand = command
+    this.lastSentPayload = command
     this.addEvent('info', `已发送手动灯控指令：${command}。`)
     this.emitSnapshot()
   }
@@ -238,7 +248,7 @@ export class StateManager extends EventEmitter {
     })
   }
 
-  private updateAgent(patch: Partial<Pick<AgentState, 'claude' | 'codex'>>, message: string): void {
+  private updateAgent(patch: Partial<Pick<AgentState, 'claude' | 'codex'>>, message: string): boolean {
     const nextClaude = patch.claude ?? this.agent.claude
     const nextCodex = patch.codex ?? this.agent.codex
     const nextGlobal = computeGlobalState({ claude: nextClaude, codex: nextCodex })
@@ -248,7 +258,7 @@ export class StateManager extends EventEmitter {
       nextGlobal !== this.agent.global
 
     if (!changed) {
-      return
+      return false
     }
 
     this.agent = {
@@ -261,6 +271,7 @@ export class StateManager extends EventEmitter {
     this.addEvent('info', message)
     this.scheduleFlush()
     this.emitSnapshot()
+    return true
   }
 
   private scheduleFlush(): void {
@@ -356,11 +367,12 @@ export class StateManager extends EventEmitter {
     }
 
     const command = ledCommandForGlobalState(this.agent.global)
+    const payload = buildMonitorStatusPayload(this.agent, this.codexActivity.phase)
     const bleSnapshot = this.ble.getSnapshot()
     const bleWritable = bleSnapshot.state === 'connected' || bleSnapshot.state === 'mock'
 
-    // 硬件只需要全局颜色；桌面灵动岛通过快照展示每个 CLI 的独立状态。
-    if (!force && command === this.lastSentCommand) {
+    // ESP32 屏幕需要全局颜色、Claude/Codex 状态和 Codex 阶段，不能只比较灯色。
+    if (!force && payload === this.lastSentPayload) {
       return
     }
 
@@ -373,9 +385,9 @@ export class StateManager extends EventEmitter {
     this.flushing = true
 
     try {
-      await this.ble.send(command)
-      this.lastSentCommand = command
-      this.addEvent('info', `已同步硬件灯状态：${command}。`)
+      await this.ble.sendPayload(payload)
+      this.lastSentPayload = payload
+      this.addEvent('info', `已同步硬件状态：${command} / ${payload}。`)
     } catch (error) {
       this.addEvent('warning', `硬件灯同步失败：${errorMessage(error)}`)
     } finally {

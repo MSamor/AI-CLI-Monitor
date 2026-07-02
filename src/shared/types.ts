@@ -2,6 +2,10 @@ export type ClaudeState = 'idle' | 'running' | 'waiting'
 export type CodexState = 'idle' | 'running' | 'waiting'
 export type GlobalState = 'green' | 'red' | 'yellow'
 export type LedCommand = 'R' | 'G' | 'Y' | 'B'
+export type AgentStateCode = 'I' | 'R' | 'W'
+export type CodexPhaseCode = 'I' | 'P' | 'T' | 'W' | 'D' | 'C' | 'S' | 'X'
+export type MonitorStatusPayload = `M,${LedCommand},${AgentStateCode},${AgentStateCode},${CodexPhaseCode}`
+export type BlePayload = LedCommand | MonitorStatusPayload
 export type MonitoredTool = 'claude' | 'codex'
 export type ToolHookStatus = 'enabled' | 'disabled' | 'partial' | 'error'
 export type UpdatePhase = 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
@@ -57,6 +61,7 @@ export type BleSnapshot = {
   state: BleConnectionState
   deviceName?: string
   lastCommand?: LedCommand
+  lastPayload?: BlePayload
   diagnostic?: string
 }
 

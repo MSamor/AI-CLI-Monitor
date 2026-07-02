@@ -1,13 +1,17 @@
 import { EventEmitter } from 'node:events'
-import type { BleSnapshot, LedCommand } from '../../shared/types'
+import type { BlePayload, BleSnapshot, LedCommand } from '../../shared/types'
 
 export abstract class BleTransport extends EventEmitter {
   abstract readonly mode: BleSnapshot['mode']
 
   abstract start(): Promise<void>
   abstract stop(): Promise<void>
-  abstract send(command: LedCommand): Promise<void>
+  abstract sendPayload(payload: BlePayload): Promise<void>
   abstract getSnapshot(): BleSnapshot
+
+  send(command: LedCommand): Promise<void> {
+    return this.sendPayload(command)
+  }
 
   onStatus(listener: (snapshot: BleSnapshot) => void): () => void {
     this.on('status', listener)

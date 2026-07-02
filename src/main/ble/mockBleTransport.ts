@@ -1,4 +1,5 @@
-import type { BleSnapshot, LedCommand } from '../../shared/types'
+import { ledCommandFromPayload } from '../../shared/protocol'
+import type { BlePayload, BleSnapshot } from '../../shared/types'
 import { BleTransport } from './bleTransport'
 
 export class MockBleTransport extends BleTransport {
@@ -34,10 +35,11 @@ export class MockBleTransport extends BleTransport {
     this.emitStatus()
   }
 
-  async send(command: LedCommand): Promise<void> {
+  async sendPayload(payload: BlePayload): Promise<void> {
     this.snapshot = {
       ...this.snapshot,
-      lastCommand: command
+      lastCommand: ledCommandFromPayload(payload),
+      lastPayload: payload
     }
     this.emitStatus()
   }

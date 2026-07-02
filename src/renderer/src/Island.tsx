@@ -277,7 +277,7 @@ export function Island({ snapshot }: { snapshot: MonitorSnapshot }): JSX.Element
               <IslandMetric
                 icon={<Zap size={13} />}
                 label="灯控"
-                value={snapshot.ble.lastCommand ?? commandForGlobal(snapshot.agent.global)}
+                value={snapshot.ble.lastPayload ?? snapshot.ble.lastCommand ?? commandForGlobal(snapshot.agent.global)}
                 tone={snapshot.agent.global}
               />
               <div className={`islandCodexStep islandCodexStep-${snapshot.agent.codex}`}>

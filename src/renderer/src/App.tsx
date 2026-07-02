@@ -314,6 +314,8 @@ function ToolIntegrationRow({
 }
 
 function BlePanel({ ble }: { ble: BleSnapshot }): JSX.Element {
+  const lastPayload = ble.lastPayload ?? ble.lastCommand
+
   return (
     <div className={`panel blePanel blePanel-${ble.state}`}>
       <div className="sectionHeader">
@@ -325,7 +327,7 @@ function BlePanel({ ble }: { ble: BleSnapshot }): JSX.Element {
       </div>
       <p>{ble.mode === 'mock' ? '模拟蓝牙通道' : ble.deviceName ?? '等待手动重试'}</p>
       <p className="bleHint">启动后只自动扫描一次；后续需要点击「重连」。</p>
-      {ble.lastCommand ? <p className="lastCommand">最近指令：{ble.lastCommand}</p> : null}
+      {lastPayload ? <p className="lastCommand">最近指令：{lastPayload}</p> : null}
       {ble.diagnostic ? <p className="diagnostic">{ble.diagnostic}</p> : null}
       <div className="inlineActions">
         <button type="button" title="重新连接蓝牙" onClick={() => void window.aiMonitor.reconnectBle()}>

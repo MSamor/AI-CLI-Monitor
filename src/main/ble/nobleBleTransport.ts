@@ -1,10 +1,11 @@
 import noble, { type Characteristic, type NobleState, type Peripheral } from '@abandonware/noble'
 import {
   BLE_DEVICE_NAME,
+  ledCommandFromPayload,
   NUS_RX_CHARACTERISTIC_UUID,
   NUS_SERVICE_UUID
 } from '../../shared/protocol'
-import type { BleSnapshot, LedCommand } from '../../shared/types'
+import type { BlePayload, BleSnapshot } from '../../shared/types'
 import { BleTransport, errorMessage } from './bleTransport'
 
 const SCAN_TIMEOUT_MS = 8000
@@ -53,13 +54,17 @@ export class NobleBleTransport extends BleTransport {
     this.updateSnapshot({ state: 'idle', diagnostic: undefined })
   }
 
-  async send(command: LedCommand): Promise<void> {
+  async sendPayload(payload: BlePayload): Promise<void> {
     if (!this.rxCharacteristic) {
       throw new Error('蓝牙设备尚未连接。')
     }
 
-    await this.rxCharacteristic.writeAsync(Buffer.from(command, 'utf8'), false)
-    this.updateSnapshot({ lastCommand: command, diagnostic: undefined })
+    await this.rxCharacteristic.writeAsync(Buffer.from(payload, 'utf8'), false)
+    this.updateSnapshot({
+      lastCommand: ledCommandFromPayload(payload),
+      lastPayload: payload,
+      diagnostic: undefined
+    })
   }
 
   getSnapshot(): BleSnapshot {
@@ -145,7 +150,7 @@ export class NobleBleTransport extends BleTransport {
         await peripheral.connectAsync()
       }
 
-      // Pico 暴露 Nordic UART 兼容服务。桌面端只写 RX，TX 保留给后续诊断。
+      // ESP32 暴露 Nordic UART 兼容服务。桌面端只写 RX，TX 保留给后续诊断。
       const { characteristics } =
         await peripheral.discoverSomeServicesAndCharacteristicsAsync(
           [NUS_SERVICE_UUID],
@@ -166,7 +171,7 @@ export class NobleBleTransport extends BleTransport {
       this.updateSnapshot({
         state: 'connected',
         deviceName: peripheral.advertisement.localName ?? BLE_DEVICE_NAME,
-        diagnostic: '已连接硬件，状态会自动同步到 Pico。'
+        diagnostic: '已连接硬件，状态会自动同步到 ESP32。'
       })
     } catch (error) {
       this.rxCharacteristic = undefined
