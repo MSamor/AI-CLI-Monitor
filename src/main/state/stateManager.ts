@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import { buildMonitorStatusPayload, ledCommandForGlobalState } from '../../shared/protocol'
+import { agentStateCode, buildMonitorStatusPayload, ledCommandForGlobalState } from '../../shared/protocol'
 import {
   computeGlobalState,
   createCodexActivitySnapshot,
@@ -45,6 +45,7 @@ export class StateManager extends EventEmitter {
   private claudeActivityTimer?: NodeJS.Timeout
   private codexActivityTimer?: NodeJS.Timeout
   private lastSentPayload?: BlePayload
+  private lastActiveAgent?: 'claude' | 'codex'
   private removeBleStatusListener?: () => void
   private bleReady = false
   private flushing = false
@@ -113,11 +114,19 @@ export class StateManager extends EventEmitter {
 
   setClaudeState(next: ClaudeState, source: string): void {
     this.updateAgent({ claude: next }, `Claude 状态变更为「${labelForAgentState(next)}」（${source}）。`)
+    if (next !== 'idle') {
+      this.lastActiveAgent = 'claude'
+      void this.flushGlobalState(true)
+    }
     this.refreshAgentActivityTimeout('claude', next)
   }
 
   setCodexState(next: CodexState, source: string): void {
     this.updateAgent({ codex: next }, `Codex 状态变更为「${labelForAgentState(next)}」（${source}）。`)
+    if (next !== 'idle') {
+      this.lastActiveAgent = 'codex'
+      void this.flushGlobalState(true)
+    }
     this.refreshAgentActivityTimeout('codex', next)
   }
 
@@ -133,6 +142,10 @@ export class StateManager extends EventEmitter {
         { codex: nextState },
         `${source}：${this.codexActivity.label}。${this.codexActivity.detail}`
       )
+      if (nextState !== 'idle') {
+        this.lastActiveAgent = 'codex'
+        void this.flushGlobalState(true)
+      }
       this.refreshAgentActivityTimeout('codex', nextState)
       // Codex 阶段可能变化但 running/waiting/idle 不变，ESP32 屏幕也需要刷新。
       this.scheduleFlush()
@@ -210,9 +223,11 @@ export class StateManager extends EventEmitter {
   }
 
   async setManualLed(command: LedCommand): Promise<void> {
-    await this.ble.send(command)
-    this.lastSentPayload = command
-    this.addEvent('info', `已发送手动灯控指令：${command}。`)
+    const payload = this.buildManualPayload(command)
+
+    await this.ble.sendPayload(payload)
+    this.lastSentPayload = payload
+    this.addEvent('info', `已发送手动灯控指令：${command} / ${payload}。`)
     this.emitSnapshot()
   }
 
@@ -395,6 +410,36 @@ export class StateManager extends EventEmitter {
     }
 
     this.emitSnapshot()
+  }
+
+  private buildManualPayload(command: LedCommand): BlePayload {
+    if (command === 'B') {
+      return command
+    }
+
+    const agent = this.agentForManualCommand(command)
+    return `M,${command},${agentStateCode(agent.claude)},${agentStateCode(agent.codex)},${this.codexActivity.phase === 'idle' ? 'I' : 'T'}`
+  }
+
+  private agentForManualCommand(command: LedCommand): Pick<AgentState, 'claude' | 'codex'> {
+    const manualState = command === 'Y' ? 'waiting' : command === 'R' ? 'running' : 'idle'
+
+    if (manualState === 'idle') {
+      return { claude: 'idle', codex: 'idle' }
+    }
+
+    if (this.agent.claude !== 'idle' || this.agent.codex !== 'idle') {
+      return {
+        claude: this.agent.claude,
+        codex: this.agent.codex
+      }
+    }
+
+    if (this.lastActiveAgent === 'claude') {
+      return { claude: manualState, codex: 'idle' }
+    }
+
+    return { claude: 'idle', codex: manualState }
   }
 
   private addEvent(level: MonitorEvent['level'], message: string): void {
