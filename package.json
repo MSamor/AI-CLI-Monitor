@@ -62,6 +62,10 @@
       {
         "from": "build/trayTemplate@2x.png",
         "to": "trayTemplate@2x.png"
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
       }
     ],
     "directories": {
@@ -90,6 +94,7 @@
       "artifactName": "${productName}-${version}-${platform}-${arch}.${ext}"
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         "nsis",
         "zip"

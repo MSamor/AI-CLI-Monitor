@@ -59,12 +59,24 @@ function setDockIcon(): void {
   }
 }
 
+function loadAppIcon(): Electron.NativeImage | undefined {
+  if (process.platform === 'win32') {
+    return loadImageAsset('icon.ico')
+  }
+
+  if (process.platform === 'darwin') {
+    return loadImageAsset('icon.icns')
+  }
+
+  return undefined
+}
+
 function createWindow(): BrowserWindow {
   if (mainWindow && !mainWindow.isDestroyed()) {
     return mainWindow
   }
 
-  const appIcon = loadImageAsset('icon.icns')
+  const appIcon = loadAppIcon()
 
   mainWindow = new BrowserWindow({
     width: 760,
@@ -121,29 +133,32 @@ function createTray(): void {
     return
   }
 
+  const trayMenu = Menu.buildFromTemplate([
+    {
+      label: '打开窗口',
+      click: showMainWindow
+    },
+    {
+      label: '显示灵动岛',
+      click: () => desktopIsland?.show()
+    },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: () => {
+        isQuitting = true
+        app.quit()
+      }
+    }
+  ])
+
   tray = new Tray(createTrayIcon())
   tray.setToolTip('AI CLI Monitor')
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      {
-        label: '打开窗口',
-        click: showMainWindow
-      },
-      {
-        label: '显示灵动岛',
-        click: () => desktopIsland?.show()
-      },
-      { type: 'separator' },
-      {
-        label: '退出',
-        click: () => {
-          isQuitting = true
-          app.quit()
-        }
-      }
-    ])
-  )
   tray.on('click', showMainWindow)
+  tray.on('double-click', showMainWindow)
+  tray.on('right-click', () => {
+    tray?.popUpContextMenu(trayMenu)
+  })
 }
 
 function createTrayIcon(): Electron.NativeImage {
