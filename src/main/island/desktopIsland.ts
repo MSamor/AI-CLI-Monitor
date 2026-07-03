@@ -30,6 +30,8 @@ export class DesktopIslandController {
   ) {}
 
   show(): void {
+    this.preferences.setDesktopIslandEnabled(true)
+
     if (this.window && !this.window.isDestroyed()) {
       this.window.show()
       this.applyBounds()
@@ -89,6 +91,7 @@ export class DesktopIslandController {
   }
 
   hide(): void {
+    this.preferences.setDesktopIslandEnabled(false)
     this.expanded = false
 
     if (this.window && !this.window.isDestroyed()) {

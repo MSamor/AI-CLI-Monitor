@@ -185,7 +185,9 @@ async function bootstrap(): Promise<void> {
 
   createTray()
   createWindow()
-  desktopIsland.show()
+  if (preferences.isDesktopIslandEnabled()) {
+    desktopIsland.show()
+  }
 
   updateManager = new UpdateManager(
     () => mainWindow,

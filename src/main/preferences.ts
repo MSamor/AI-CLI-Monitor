@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path'
 
 export type AppPreferences = {
   desktopIslandBounds?: Electron.Rectangle
+  desktopIslandEnabled?: boolean
 }
 
 export class PreferencesStore {
@@ -20,6 +21,18 @@ export class PreferencesStore {
     this.preferences = {
       ...this.preferences,
       desktopIslandBounds: { ...bounds }
+    }
+    this.write()
+  }
+
+  isDesktopIslandEnabled(): boolean {
+    return this.preferences.desktopIslandEnabled ?? true
+  }
+
+  setDesktopIslandEnabled(enabled: boolean): void {
+    this.preferences = {
+      ...this.preferences,
+      desktopIslandEnabled: enabled
     }
     this.write()
   }
@@ -54,7 +67,10 @@ function isPreferences(value: unknown): value is AppPreferences {
   }
 
   const preferences = value as AppPreferences
-  return preferences.desktopIslandBounds === undefined || isRectangle(preferences.desktopIslandBounds)
+  return (
+    (preferences.desktopIslandBounds === undefined || isRectangle(preferences.desktopIslandBounds)) &&
+    (preferences.desktopIslandEnabled === undefined || typeof preferences.desktopIslandEnabled === 'boolean')
+  )
 }
 
 function isRectangle(value: unknown): value is Electron.Rectangle {
