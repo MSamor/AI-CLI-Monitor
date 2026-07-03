@@ -13,6 +13,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
+    "test": "node scripts/test-codex-session-activity.mjs",
     "build": "npm run typecheck && electron-vite build",
     "pack": "npm run build && electron-builder --dir",
     "dist": "npm run build && electron-builder --publish never",

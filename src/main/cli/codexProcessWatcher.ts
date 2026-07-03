@@ -3,6 +3,7 @@ import { homedir } from 'node:os'
 import { promises as fs } from 'node:fs'
 import type { StateManager } from '../state/stateManager'
 import type { ClaudeHookPayload, CodexState } from '../../shared/types'
+import { codexPayloadNeedsUserAction } from '../../shared/state'
 import { listProcesses, type ProcessInfo } from './processList'
 
 type CodexProcessWatcherOptions = {
@@ -30,7 +31,7 @@ export class CodexProcessWatcher {
     private stateManager: StateManager,
     options: CodexProcessWatcherOptions = {}
   ) {
-    this.pollMs = options.pollMs ?? 1000
+    this.pollMs = options.pollMs ?? 250
     this.currentPid = options.currentPid ?? process.pid
     this.currentPpid = options.currentPpid ?? process.ppid
     this.codexHome = options.codexHome ?? process.env.CODEX_HOME ?? path.join(homedir(), '.codex')
@@ -176,12 +177,17 @@ export class CodexProcessWatcher {
     const text = `${this.pendingSessionLines.get(file) ?? ''}${chunk}`
     const lines = text.split(/\r?\n/)
     const hasTrailingNewline = text.endsWith('\n')
-    const completeLines = hasTrailingNewline ? lines : lines.slice(0, -1)
+    let completeLines = hasTrailingNewline ? lines : lines.slice(0, -1)
+    const trailingLine = hasTrailingNewline ? undefined : lines.at(-1)
 
     if (hasTrailingNewline) {
       this.pendingSessionLines.delete(file)
+    } else if (trailingLine?.trim() && parseSessionLine(trailingLine)) {
+      // Some JSONL writers expose a complete final object before the trailing newline arrives.
+      completeLines = lines
+      this.pendingSessionLines.delete(file)
     } else {
-      this.pendingSessionLines.set(file, lines.at(-1) ?? '')
+      this.pendingSessionLines.set(file, trailingLine ?? '')
     }
 
     for (const line of completeLines) {
@@ -254,13 +260,13 @@ export class CodexProcessWatcher {
   }
 }
 
-type CodexSessionLine = {
+export type CodexSessionLine = {
   timestamp?: string
   type?: string
   payload?: Record<string, unknown>
 }
 
-type CodexSessionActivity = {
+export type CodexSessionActivity = {
   state: CodexState
   payload: ClaudeHookPayload
 }
@@ -322,7 +328,7 @@ function isFreshEvent(timestamp: string | undefined, startedAtMs: number): boole
   return Number.isFinite(eventAt) && eventAt >= startedAtMs - 5_000
 }
 
-function sessionActivityForEvent(
+export function sessionActivityForEvent(
   event: CodexSessionLine,
   rememberedToolName?: string
 ): CodexSessionActivity | undefined {
@@ -357,8 +363,21 @@ function sessionActivityForEvent(
       )
     }
     case 'function_call':
-    case 'custom_tool_call':
-      return createSessionActivity(event, 'PreToolUse', 'running', undefined, rememberedToolName)
+    case 'custom_tool_call': {
+      const toolName = sessionToolName(payload) ?? rememberedToolName
+
+      if (codexPayloadNeedsUserAction(payload)) {
+        return createSessionActivity(
+          event,
+          'PermissionRequest',
+          'waiting',
+          detailForWaitingSessionTool(toolName),
+          toolName
+        )
+      }
+
+      return createSessionActivity(event, 'PreToolUse', 'running', undefined, toolName)
+    }
     case 'tool_search_call':
       return createSessionActivity(event, 'PreToolUse', 'running', undefined, 'tool_search')
     case 'web_search_call':
@@ -437,6 +456,7 @@ function createSessionActivity(
 ): CodexSessionActivity {
   const payload = isRecord(event.payload) ? event.payload : {}
   const toolName = sessionToolName(payload) ?? fallbackToolName
+  const toolInput = toolInputForSessionPayload(payload)
 
   return {
     state,
@@ -448,12 +468,21 @@ function createSessionActivity(
       turn_id: toOptionalString(payload.turn_id),
       tool_name: toolName,
       tool_use_id: sessionCallId(payload),
-      tool_input: toolInputForSessionPayload(payload),
+      tool_input: toolInput,
+      permission_mode: permissionModeForSessionPayload(payload, toolInput),
       model: toOptionalString(payload.model),
       cwd: toOptionalString(payload.cwd),
       last_assistant_message: detail
     }
   }
+}
+
+function detailForWaitingSessionTool(toolName?: string): string {
+  if (toolName === 'request_user_input') {
+    return 'Codex 正在等待用户选择或输入。'
+  }
+
+  return 'Codex 正在等待授权或确认。'
 }
 
 function sessionCallId(payload: Record<string, unknown>): string | undefined {
@@ -494,6 +523,23 @@ function toolInputForSessionPayload(payload: Record<string, unknown>): unknown {
   } catch {
     return { command: args }
   }
+}
+
+function permissionModeForSessionPayload(
+  payload: Record<string, unknown>,
+  toolInput: unknown
+): string | undefined {
+  const direct = toOptionalString(payload.permission_mode)
+
+  if (direct) {
+    return direct
+  }
+
+  if (!isRecord(toolInput)) {
+    return undefined
+  }
+
+  return toOptionalString(toolInput.sandbox_permissions)
 }
 
 function extractMessageText(value: unknown): string | undefined {

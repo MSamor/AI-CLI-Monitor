@@ -85,6 +85,7 @@ export function mapClaudeHookToState(payload: ClaudeHookPayload): ClaudeState | 
 export function mapCodexActivityToState(payload: ClaudeHookPayload): CodexState | undefined {
   const eventName = String(payload.hook_event_name ?? payload.event ?? payload.state ?? '')
   const normalizedEventName = eventName.toLowerCase()
+  const needsUserAction = codexPayloadNeedsUserAction(payload)
 
   switch (normalizedEventName) {
     case 'generating':
@@ -92,12 +93,13 @@ export function mapCodexActivityToState(payload: ClaudeHookPayload): CodexState 
     case 'busy':
     case 'userpromptsubmit':
     case 'subagentstart':
-    case 'pretooluse':
     case 'posttooluse':
     case 'precompact':
     case 'postcompact':
     case 'subagentstop':
       return 'running'
+    case 'pretooluse':
+      return needsUserAction ? 'waiting' : 'running'
     case 'waiting':
     case 'permissionrequest':
     case 'notification':
@@ -115,6 +117,10 @@ export function mapCodexActivityToState(payload: ClaudeHookPayload): CodexState 
     case 'sessionend':
       return 'idle'
     default:
+      if (needsUserAction) {
+        return 'waiting'
+      }
+
       return undefined
   }
 }
@@ -123,7 +129,9 @@ export function createCodexActivitySnapshot(payload: ClaudeHookPayload): CodexAc
   const eventName = String(payload.hook_event_name ?? payload.event ?? payload.state ?? 'Unknown')
   const toolName = toOptionalString(payload.tool_name)
   const command = extractCommand(payload.tool_input)
-  const phase = phaseForCodexEvent(eventName)
+  const phase = codexPayloadShouldShowPermission(eventName, payload)
+    ? 'permission'
+    : phaseForCodexEvent(eventName)
   const label = labelForCodexPhase(phase, toolName)
   const detail = detailForCodexPayload(phase, payload, command, toolName)
 
@@ -142,6 +150,48 @@ export function createCodexActivitySnapshot(payload: ClaudeHookPayload): CodexAc
     cwd: toOptionalString(payload.cwd),
     lastAssistantMessage: toOptionalString(payload.last_assistant_message),
     updatedAt: new Date().toISOString()
+  }
+}
+
+export function codexPayloadNeedsUserAction(payload: ClaudeHookPayload): boolean {
+  const toolName =
+    toOptionalString(payload.tool_name) ??
+    toOptionalString(payload.name) ??
+    toOptionalString(payload.tool)
+
+  if (toolName === 'request_user_input') {
+    return true
+  }
+
+  const toolInput = toolInputRecord(payload.tool_input ?? payload.input ?? payload.arguments)
+
+  return Boolean(
+    toolInput &&
+      (toolInput.sandbox_permissions === 'require_escalated' ||
+        typeof toolInput.justification === 'string')
+  )
+}
+
+function codexPayloadShouldShowPermission(eventName: string, payload: ClaudeHookPayload): boolean {
+  if (!codexPayloadNeedsUserAction(payload)) {
+    return false
+  }
+
+  switch (eventName.toLowerCase()) {
+    case 'posttooluse':
+    case 'stop':
+    case 'done':
+    case 'exit':
+    case 'sessionend':
+    case 'turnaborted':
+    case 'interrupted':
+    case 'cancelled':
+    case 'canceled':
+    case 'abort':
+    case 'aborted':
+      return false
+    default:
+      return true
   }
 }
 
@@ -224,6 +274,16 @@ function detailForCodexPayload(
   toolName?: string
 ): string {
   if (phase === 'permission') {
+    const message = toOptionalString(payload.last_assistant_message)
+
+    if (message) {
+      return message
+    }
+
+    if (toolName === 'request_user_input') {
+      return '正在等待用户选择或输入。'
+    }
+
     return `正在等待授权，模式：${toOptionalString(payload.permission_mode) ?? '未知'}。`
   }
 
@@ -265,19 +325,42 @@ function prefixToolOutput(phase: CodexActivityPhase, detail: string, toolName?: 
 }
 
 function extractCommand(value: unknown): string | undefined {
-  if (!value || typeof value !== 'object') {
+  const record = toolInputRecord(value)
+
+  if (!record) {
     return undefined
   }
 
-  if ('command' in value && typeof value.command === 'string') {
-    return value.command
+  if ('command' in record && typeof record.command === 'string') {
+    return record.command
   }
 
-  if ('cmd' in value && typeof value.cmd === 'string') {
-    return value.cmd
+  if ('cmd' in record && typeof record.cmd === 'string') {
+    return record.cmd
   }
 
   return undefined
+}
+
+function toolInputRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value) {
+    return undefined
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(value)
+      return toolInputRecord(parsed)
+    } catch {
+      return undefined
+    }
+  }
+
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    return undefined
+  }
+
+  return value as Record<string, unknown>
 }
 
 function toOptionalString(value: unknown): string | undefined {

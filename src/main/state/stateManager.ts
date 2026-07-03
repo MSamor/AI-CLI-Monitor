@@ -52,6 +52,7 @@ export class StateManager extends EventEmitter {
   private codexActivityTimer?: NodeJS.Timeout
   private lastSentPayload?: BlePayload
   private lastActiveAgent?: 'claude' | 'codex'
+  private lastCodexActivityEventKey?: string
   private activityStartedAtMs?: number
   private removeBleStatusListener?: () => void
   private bleReady = false
@@ -143,6 +144,7 @@ export class StateManager extends EventEmitter {
     source = 'Codex 官方 hook'
   ): void {
     this.codexActivity = createCodexActivitySnapshot(payload)
+    const activityEventKey = this.codexActivityEventKey(nextState)
 
     if (nextState) {
       const agentChanged = this.updateAgent(
@@ -157,15 +159,20 @@ export class StateManager extends EventEmitter {
       // Codex 阶段可能变化但 running/waiting/idle 不变，ESP32 屏幕也需要刷新。
       this.scheduleFlush()
 
-      if (!agentChanged) {
+      if (!agentChanged && activityEventKey !== this.lastCodexActivityEventKey) {
         this.addEvent('info', `${source}：${this.codexActivity.label}。`)
-        this.emitSnapshot()
       }
 
+      this.lastCodexActivityEventKey = activityEventKey
+      this.emitSnapshot()
       return
     }
 
-    this.addEvent('info', `${source}：${this.codexActivity.label}。`)
+    if (activityEventKey !== this.lastCodexActivityEventKey) {
+      this.addEvent('info', `${source}：${this.codexActivity.label}。`)
+    }
+
+    this.lastCodexActivityEventKey = activityEventKey
     this.scheduleFlush()
     this.emitSnapshot()
   }
@@ -383,6 +390,20 @@ export class StateManager extends EventEmitter {
 
   private timeoutSeconds(timeoutMs: number): number {
     return Math.round(timeoutMs / 1000)
+  }
+
+  private codexActivityEventKey(state?: CodexState): string {
+    return [
+      state ?? this.agent.codex,
+      this.codexActivity.phase,
+      this.codexActivity.eventName,
+      this.codexActivity.toolName,
+      this.codexActivity.toolUseId,
+      this.codexActivity.command,
+      this.codexActivity.detail
+    ]
+      .filter(Boolean)
+      .join('\u001f')
   }
 
   private async flushGlobalState(force = false): Promise<void> {
