@@ -11,6 +11,13 @@ import type {
   MonitorStatusPayload
 } from './types'
 
+export type MonitorStatusMetadata = {
+  activeTool?: string
+  project?: string
+  elapsedSec?: number
+  summary?: string
+}
+
 export const BLE_DEVICE_NAME = 'AI_LED'
 
 export const NUS_SERVICE_UUID = '6e400001b5a3f393e0a9e50e24dcca9e'
@@ -72,9 +79,21 @@ export function codexPhaseCode(phase: CodexActivityPhase): CodexPhaseCode {
 
 export function buildMonitorStatusPayload(
   agent: Pick<AgentState, 'global' | 'claude' | 'codex'>,
-  codexPhase: CodexActivityPhase
+  codexPhase: CodexActivityPhase,
+  metadata: MonitorStatusMetadata = {}
 ): MonitorStatusPayload {
-  return `M,${ledCommandForGlobalState(agent.global)},${agentStateCode(agent.claude)},${agentStateCode(agent.codex)},${codexPhaseCode(codexPhase)}`
+  const head =
+    `M,${ledCommandForGlobalState(agent.global)},${agentStateCode(agent.claude)},${agentStateCode(agent.codex)},${codexPhaseCode(codexPhase)}` as const
+  const activeTool = sanitizePacketField(metadata.activeTool, 15)
+  const project = sanitizePacketField(metadata.project, 23)
+  const elapsed = String(Math.max(0, Math.floor(metadata.elapsedSec ?? 0)))
+  const summary = sanitizePacketField(metadata.summary, 39)
+
+  if (!activeTool && !project && elapsed === '0' && !summary) {
+    return head
+  }
+
+  return `${head},${activeTool},${project},${elapsed},${summary}` as MonitorStatusPayload
 }
 
 export function ledCommandFromPayload(payload: BlePayload): LedCommand | undefined {
@@ -88,4 +107,13 @@ export function ledCommandFromPayload(payload: BlePayload): LedCommand | undefin
 
 function isLedCommand(value: string): value is LedCommand {
   return value === 'R' || value === 'G' || value === 'Y' || value === 'B'
+}
+
+function sanitizePacketField(value: string | undefined, maxLength: number): string {
+  return String(value ?? '')
+    .replace(/[^\x20-\x7E]/g, ' ')
+    .replace(/[,]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength)
 }

@@ -1,5 +1,10 @@
 import { EventEmitter } from 'node:events'
-import { agentStateCode, buildMonitorStatusPayload, ledCommandForGlobalState } from '../../shared/protocol'
+import { basename } from 'node:path'
+import {
+  buildMonitorStatusPayload,
+  ledCommandForGlobalState,
+  type MonitorStatusMetadata
+} from '../../shared/protocol'
 import {
   computeGlobalState,
   createCodexActivitySnapshot,
@@ -14,6 +19,7 @@ import type {
   ClaudeHookPayload,
   CodexActivitySnapshot,
   CodexState,
+  GlobalState,
   LedCommand,
   MonitorEvent,
   MonitorSnapshot,
@@ -46,6 +52,7 @@ export class StateManager extends EventEmitter {
   private codexActivityTimer?: NodeJS.Timeout
   private lastSentPayload?: BlePayload
   private lastActiveAgent?: 'claude' | 'codex'
+  private activityStartedAtMs?: number
   private removeBleStatusListener?: () => void
   private bleReady = false
   private flushing = false
@@ -264,6 +271,7 @@ export class StateManager extends EventEmitter {
   }
 
   private updateAgent(patch: Partial<Pick<AgentState, 'claude' | 'codex'>>, message: string): boolean {
+    const previousGlobal = this.agent.global
     const nextClaude = patch.claude ?? this.agent.claude
     const nextCodex = patch.codex ?? this.agent.codex
     const nextGlobal = computeGlobalState({ claude: nextClaude, codex: nextCodex })
@@ -281,6 +289,7 @@ export class StateManager extends EventEmitter {
       codex: nextCodex,
       global: nextGlobal
     }
+    this.updateActivityTimer(previousGlobal, nextGlobal)
 
     // UI 需要立即看到每个 CLI 的状态；硬件灯写入会防抖，避免短暂状态抖动造成闪烁。
     this.addEvent('info', message)
@@ -382,7 +391,7 @@ export class StateManager extends EventEmitter {
     }
 
     const command = ledCommandForGlobalState(this.agent.global)
-    const payload = buildMonitorStatusPayload(this.agent, this.codexActivity.phase)
+    const payload = buildMonitorStatusPayload(this.agent, this.codexActivity.phase, this.buildHardwareMetadata())
     const bleSnapshot = this.ble.getSnapshot()
     const bleWritable = bleSnapshot.state === 'connected' || bleSnapshot.state === 'mock'
 
@@ -418,7 +427,81 @@ export class StateManager extends EventEmitter {
     }
 
     const agent = this.agentForManualCommand(command)
-    return `M,${command},${agentStateCode(agent.claude)},${agentStateCode(agent.codex)},${this.codexActivity.phase === 'idle' ? 'I' : 'T'}`
+    return buildMonitorStatusPayload(
+      {
+        ...agent,
+        global: computeGlobalState(agent)
+      },
+      this.codexActivity.phase === 'idle' ? 'idle' : 'tool-start',
+      this.buildHardwareMetadata(agent)
+    )
+  }
+
+  private updateActivityTimer(previousGlobal: GlobalState, nextGlobal: GlobalState): void {
+    if (nextGlobal === 'green') {
+      this.activityStartedAtMs = undefined
+      return
+    }
+
+    if (previousGlobal !== nextGlobal || !this.activityStartedAtMs) {
+      this.activityStartedAtMs = Date.now()
+    }
+  }
+
+  private buildHardwareMetadata(
+    agent: Pick<AgentState, 'claude' | 'codex'> = this.agent
+  ): MonitorStatusMetadata {
+    return {
+      activeTool: this.hardwareActiveTool(agent),
+      project: this.hardwareProject(),
+      elapsedSec: this.hardwareElapsedSeconds(agent),
+      summary: this.hardwareSummary(agent)
+    }
+  }
+
+  private hardwareActiveTool(agent: Pick<AgentState, 'claude' | 'codex'>): string | undefined {
+    if (agent.codex !== 'idle') {
+      return this.codexActivity.toolName ?? 'Codex'
+    }
+
+    if (agent.claude !== 'idle') {
+      return 'Claude'
+    }
+
+    return undefined
+  }
+
+  private hardwareProject(): string | undefined {
+    if (!this.codexActivity.cwd) {
+      return undefined
+    }
+
+    return basename(this.codexActivity.cwd)
+  }
+
+  private hardwareElapsedSeconds(agent: Pick<AgentState, 'claude' | 'codex'>): number {
+    if (computeGlobalState(agent) === 'green' || !this.activityStartedAtMs) {
+      return 0
+    }
+
+    return Math.max(0, Math.floor((Date.now() - this.activityStartedAtMs) / 1000))
+  }
+
+  private hardwareSummary(agent: Pick<AgentState, 'claude' | 'codex'>): string | undefined {
+    if (agent.codex !== 'idle') {
+      return (
+        this.codexActivity.command ??
+        this.codexActivity.toolName ??
+        this.codexActivity.eventName ??
+        this.codexActivity.phase
+      )
+    }
+
+    if (agent.claude !== 'idle') {
+      return 'Claude activity'
+    }
+
+    return undefined
   }
 
   private agentForManualCommand(command: LedCommand): Pick<AgentState, 'claude' | 'codex'> {

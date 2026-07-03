@@ -4,7 +4,9 @@ export type GlobalState = 'green' | 'red' | 'yellow'
 export type LedCommand = 'R' | 'G' | 'Y' | 'B'
 export type AgentStateCode = 'I' | 'R' | 'W'
 export type CodexPhaseCode = 'I' | 'P' | 'T' | 'W' | 'D' | 'C' | 'S' | 'X'
-export type MonitorStatusPayload = `M,${LedCommand},${AgentStateCode},${AgentStateCode},${CodexPhaseCode}`
+export type MonitorStatusPayload =
+  | `M,${LedCommand},${AgentStateCode},${AgentStateCode},${CodexPhaseCode}`
+  | `M,${LedCommand},${AgentStateCode},${AgentStateCode},${CodexPhaseCode},${string}`
 export type BlePayload = LedCommand | MonitorStatusPayload
 export type MonitoredTool = 'claude' | 'codex'
 export type ToolHookStatus = 'enabled' | 'disabled' | 'partial' | 'error'
