@@ -47,10 +47,7 @@ https://github.com/MSamor/AI-CLI-Monitor/releases
 
 ## 蓝牙硬件
 
-  <video controls width="100%">
-    <source src="img/5a4543cf46cc7cd2e83d0173b19463ea.mp4" type="video/mp4">
-    您的浏览器不支持视频播放
-  </video>
+https://github.com/user-attachments/assets/8ed78998-4235-4eb8-8ba8-64c0f0141891
 
 ## 开发
 
