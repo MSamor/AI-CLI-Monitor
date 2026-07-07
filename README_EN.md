@@ -33,28 +33,15 @@
 
 AI CLI Monitor is a desktop utility that monitors Claude CLI and Codex CLI activity, then mirrors the status to the main desktop window, a desktop dynamic island, and an optional BLE-based microcontroller device with screen and RGB indicator support.
 
-### 🧭 Contents
-
-- [✨ What It Does](#-what-it-does)
-- [📸 Screenshots](#-screenshots)
-- [🚦 Status Rules](#-status-rules)
-- [🧠 How It Works](#-how-it-works)
-- [🚀 Quick Start](#-quick-start)
-- [🧩 First Run](#-first-run)
-- [🔵 BLE Hardware](#-ble-hardware)
-- [🛠️ Development](#-development)
-- [📁 Project Structure](#-project-structure)
-- [📦 Release Artifacts](#-release-artifacts)
-- [📄 License](#-license)
-
 ### ✨ What It Does
 
 - 🔍 Detects whether Claude / Codex is generating, waiting for confirmation, or idle.
 - 🖥️ Displays Claude, Codex, BLE hardware, and event stream status in the main window and desktop island.
 - 🔴 Supports the LCKFB ESP32-S3 board for RGB indicator and screen status output.
+
+
 - 🧷 Lets you enable or disable Claude / Codex hooks from the desktop UI.
 - 📡 Syncs status to hardware through BLE GATT. The target device name is `AI_LED`.
-- 📦 Ships official builds through GitHub Releases for Windows, macOS, and Linux.
 
 ### 📸 Screenshots
 
@@ -75,8 +62,8 @@ AI CLI Monitor is a desktop utility that monitors Claude CLI and Codex CLI activ
 
 ```mermaid
 flowchart LR
-  Claude[Claude CLI Hook] --> Monitor[AI CLI Monitor]
-  Codex[Codex CLI Hook] --> Monitor
+  Claude[Claude CLI] --> Monitor[AI CLI Monitor]
+  Codex[Codex CLI] --> Monitor
   Monitor --> Window[Main Window]
   Monitor --> Island[Desktop Island]
   Monitor --> Events[Event Stream]
@@ -127,7 +114,6 @@ Hardware command mapping:
 | `R` | Red, AI is generating. |
 | `Y` | Yellow, waiting for confirmation. |
 | `G` | Green, idle. |
-| `B` | Blue breathing light for manual testing. |
 
 ### 🛠️ Development
 
@@ -194,4 +180,4 @@ Build artifacts are written to `release/`. macOS outputs `dmg` and `zip`, Window
 
 ### 📄 License
 
-This project declares the MIT License in `package.json`.
+MIT License

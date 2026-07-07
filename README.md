@@ -60,8 +60,8 @@ AI CLI Monitor 是一个桌面工具，用来监听 Claude CLI 与 Codex CLI 的
 
 ```mermaid
 flowchart LR
-  Claude[Claude CLI Hook] --> Monitor[AI CLI Monitor]
-  Codex[Codex CLI Hook] --> Monitor
+  Claude[Claude CLI] --> Monitor[AI CLI Monitor]
+  Codex[Codex CLI] --> Monitor
   Monitor --> Window[主窗口]
   Monitor --> Island[桌面灵动岛]
   Monitor --> Events[事件流]
