@@ -1,6 +1,6 @@
 # AI CLI Monitor
 
-AI CLI Monitor是一个桌面工具，用来监听 Claude CLI 与 Codex CLI 的活动状态，并同步到主窗口、桌面灵动岛和可选的基于蓝牙的单片机设备，支持单片机屏幕显示盒 RGB 指示灯控制。
+AI CLI Monitor是一个桌面工具，用来监听 Claude CLI 与 Codex CLI 的活动状态，并同步到主窗口、桌面灵动岛和可选的基于蓝牙的单片机设备，支持单片机屏幕显示和 RGB 指示灯控制。
 
 ## 软件作用
 
@@ -30,11 +30,16 @@ https://github.com/MSamor/AI-CLI-Monitor/releases
 4. 继续使用你的Codex和Claude Code，就会显示运行状态
 5. （可选）立创实战派S3设备，刷入固件。支持屏幕显示和 RGB 指示灯
 
-桌面客户端截图：
+## 桌面客户端截图：
+可缩小为状态条展示：
 
 ![img.png](img/img_5.png)
 
+点击可展开详细信息：
+
 ![img_1.png](img/img_4.png)
+
+窗口主程序可以进行相关设置：
 
 ![img_2.png](img/img_6.png)
 
@@ -45,9 +50,13 @@ https://github.com/MSamor/AI-CLI-Monitor/releases
 - `黄色 / 等待确认`：AI 暂停在确认点，正在等待输入、授权或继续指令。
 - `绿色 / 空闲`：Claude 与 Codex 当前没有正在进行的生成活动。
 
-## 蓝牙硬件
+## 蓝牙硬件（立创实战派S3）
 
 https://github.com/user-attachments/assets/8ed78998-4235-4eb8-8ba8-64c0f0141891
+
+固件在目录 `esp32-build`文件夹中，烧录成功后启动设备就能自动连接到电脑监听状态了
+
+如何烧录？看官方文档： [烧录教程](https://wiki.lckfb.com/zh-hans/szpi-esp32s3/beginner/design-flow.html)
 
 ## 开发
 
